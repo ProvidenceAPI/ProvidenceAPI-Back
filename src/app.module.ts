@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+
 import { AuthModule } from './modules/auth/auth.modules';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import typeorm from './config/typeorm';
@@ -9,7 +8,6 @@ import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
-    AuthModule,
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeorm],
@@ -25,6 +23,7 @@ import { JwtModule } from '@nestjs/jwt';
         expiresIn: '1h',
       },
     }),
+    AuthModule,
   ],
   controllers: [],
   providers: [],
