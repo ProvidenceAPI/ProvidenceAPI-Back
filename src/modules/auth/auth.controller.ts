@@ -11,11 +11,11 @@ export class AuthController {
 
   @Post('signup')
   @HttpCode(201)
-  @ApiOperation({ summary: 'Registrar un nuevo usuario' })
-  @ApiResponse({ status: 201, description: 'Usuario creado exitosamente' })
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'user created successfully' })
   @ApiResponse({
     status: 400,
-    description: 'Datos inválidos o usuario ya existe',
+    description: 'Invalid data or user already exists',
   })
   signup(@Body() user: SignupDto) {
     return this.authService.createUser(user);
@@ -23,10 +23,10 @@ export class AuthController {
 
   @Post('signin')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Iniciar sesión' })
-  @ApiResponse({ status: 200, description: 'Login exitoso' })
-  @ApiResponse({ status: 400, description: 'Credenciales inválidas' })
-  @ApiResponse({ status: 401, description: 'Usuario baneado o cancelado' })
+  @ApiOperation({ summary: 'Sing in' })
+  @ApiResponse({ status: 200, description: 'Login successful' })
+  @ApiResponse({ status: 400, description: 'Invalid credentials' })
+  @ApiResponse({ status: 401, description: 'User banned or cancelled' })
   signin(@Body() credentials: SigninDto) {
     return this.authService.signin(credentials);
   }

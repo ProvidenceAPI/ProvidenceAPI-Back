@@ -37,7 +37,7 @@ export class AuthService {
 
     if (age < 18) {
       throw new BadRequestException(
-        'Debes ser mayor de 18 años para registrarte',
+        'You must be at least 18 years old to register',
       );
     }
   }
@@ -49,13 +49,13 @@ export class AuthService {
       email: user.email,
     });
     if (findUserByEmail)
-      throw new BadRequestException('El email ya esta registrado');
+      throw new BadRequestException('The email is already registered');
 
     const findUserByDni = await this.usersRepository.findOneBy({
       dni: user.dni,
     });
     if (findUserByDni) {
-      throw new BadRequestException('El DNI ya está registrado');
+      throw new BadRequestException('The DNI is already register');
     }
 
     const hashedPassword = await bcrypt.hash(user.password, 12);
@@ -71,11 +71,11 @@ export class AuthService {
 
       const { password, ...userWithOutPassword } = savedUser;
       return {
-        message: 'Usuario creado exitosamente',
+        message: 'User create successfully',
         user: userWithOutPassword,
       };
     } catch (error) {
-      throw new InternalServerErrorException('Error al crear el usuario');
+      throw new InternalServerErrorException('Error creating the user');
     }
   }
 
@@ -83,16 +83,16 @@ export class AuthService {
     const findUser = await this.usersRepository.findOneBy({
       email: Credentials.email,
     });
-    if (!findUser) throw new BadRequestException('Credenciales Invalidas');
+    if (!findUser) throw new BadRequestException('Invalid credentials');
 
     if (findUser.status === UserStatus.banned) {
       throw new UnauthorizedException(
-        'Tu cuenta ha sido baneada. Contacta al administrador',
+        'Your account has been banned. Contact the administrator',
       );
     }
 
     if (findUser.status === UserStatus.cancelled) {
-      throw new UnauthorizedException('Tu cuenta ha sido cancelada');
+      throw new UnauthorizedException('Your account has been cancelled');
     }
 
     try {
@@ -102,7 +102,7 @@ export class AuthService {
       );
 
       if (!matchingPasswords)
-        throw new BadRequestException('Credenciales Invalidas');
+        throw new BadRequestException('Invalid credentials');
 
       const payload = {
         id: findUser.id,
@@ -115,7 +115,7 @@ export class AuthService {
       const { password, ...userWithoutPassword } = findUser;
 
       return {
-        message: 'Login exitoso',
+        message: 'Login Successful',
         access_token: token,
         user: userWithoutPassword,
       };
@@ -126,7 +126,7 @@ export class AuthService {
       ) {
         throw error;
       }
-      throw new BadRequestException('Error en el proceso de login');
+      throw new BadRequestException('Error in the login process');
     }
   }
 }

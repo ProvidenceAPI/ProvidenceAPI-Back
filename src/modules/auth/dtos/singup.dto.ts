@@ -20,7 +20,7 @@ import { MatchPassword } from 'src/common/helper/matchPassword';
 export class SignupDto {
   @ApiProperty({
     example: 'Sofia',
-    description: 'El nombre del usuario',
+    description: 'User name',
   })
   @IsString()
   @IsNotEmpty()
@@ -30,7 +30,7 @@ export class SignupDto {
 
   @ApiProperty({
     example: 'Cañón',
-    description: 'El apellido del usuario',
+    description: 'User Last name',
   })
   @IsString()
   @IsNotEmpty()
@@ -40,7 +40,7 @@ export class SignupDto {
 
   @ApiProperty({
     example: 'sofia.canon@gmail.com',
-    description: 'El email debe ser válido',
+    description: 'Email must be valid',
   })
   @IsEmail()
   @IsNotEmpty()
@@ -49,7 +49,7 @@ export class SignupDto {
   @ApiProperty({
     example: 'Contraseña123*',
     description:
-      'La contraseña debe contener mayúsculas, minúsculas, números y caracteres especiales',
+      'The password must contain uppercase letters, lowercase letters, numbers and special characters',
   })
   @IsString()
   @IsNotEmpty()
@@ -57,13 +57,13 @@ export class SignupDto {
   @MaxLength(15)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])/, {
     message:
-      'La contraseña debe contener al menos una minúscula, una mayúscula, un número y un carácter especial (!@#$%^&*)',
+      'The password must contain uppercase letters, lowercase letters, numbers and special characters (!@#$%^&*)',
   })
   password: string;
 
   @ApiProperty({
     example: 'Contraseña123*',
-    description: 'La confirmación debe ser igual a la contraseña',
+    description: 'The confirmation must match the password',
   })
   @IsString()
   @IsNotEmpty()
@@ -72,25 +72,25 @@ export class SignupDto {
 
   @ApiProperty({
     example: '1991-03-12',
-    description: 'Fecha de nacimiento (debe ser mayor de 18 años)',
+    description: 'Date of birth (must be at least 18 years old)',
   })
   @IsDateString()
   birthdate: Date;
 
   @ApiProperty({
     example: '3157615003',
-    description: 'Número de teléfono',
+    description: 'Phone number',
   })
   @IsNotEmpty()
   @IsString()
   @Matches(/^\d{10,15}$/, {
-    message: 'El teléfono debe contener entre 10 y 15 dígitos',
+    message: 'The phone number must contain between 10 and 15 digits',
   })
   phone: string;
 
   @ApiProperty({
     example: 123456789,
-    description: 'Documento de identidad',
+    description: 'Identity document',
   })
   @IsNumber()
   @IsNotEmpty()
@@ -102,7 +102,7 @@ export class SignupDto {
   @ApiProperty({
     enum: Genre,
     example: Genre.female,
-    description: 'Género del usuario',
+    description: 'User gender',
   })
   @IsEnum(Genre)
   genre: Genre;
