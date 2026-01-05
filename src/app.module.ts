@@ -23,6 +23,7 @@ import { JwtModule } from '@nestjs/jwt';
         expiresIn: '1h',
       },
     }),
+
     AuthModule,
   ],
   controllers: [],

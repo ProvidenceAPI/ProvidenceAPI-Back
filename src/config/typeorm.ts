@@ -10,7 +10,6 @@ export const config = {
   port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
-  entities: ['dist/**/*.entity{ts,.js}'],
   dropSchema: false,
   synchronize: true,
   logging: true,

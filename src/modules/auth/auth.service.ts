@@ -94,7 +94,6 @@ export class AuthService {
     if (findUser.status === UserStatus.cancelled) {
       throw new UnauthorizedException('Your account has been cancelled');
     }
-
     try {
       const matchingPasswords = await bcrypt.compare(
         Credentials.password,

@@ -37,7 +37,6 @@ export class SignupDto {
   @MinLength(3)
   @MaxLength(80)
   lastname: string;
-
   @ApiProperty({
     example: 'sofia.canon@gmail.com',
     description: 'Email must be valid',

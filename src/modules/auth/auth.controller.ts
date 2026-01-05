@@ -20,7 +20,6 @@ export class AuthController {
   signup(@Body() user: SignupDto) {
     return this.authService.createUser(user);
   }
-
   @Post('signin')
   @HttpCode(200)
   @ApiOperation({ summary: 'Sing in' })

@@ -10,6 +10,7 @@ export class MatchPassword implements ValidatorConstraintInterface {
     if (property !== (value.object as any)[value.constraints[0]]) return false;
     return true;
   }
+
   defaultMessage() {
     return 'Password do no match!';
   }

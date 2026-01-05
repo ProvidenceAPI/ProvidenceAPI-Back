@@ -14,7 +14,6 @@ export class CreateUserDto extends SignupDto {
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
-
   @ApiProperty({
     enum: Rol,
     example: Rol.user,
