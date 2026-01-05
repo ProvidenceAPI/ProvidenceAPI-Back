@@ -69,12 +69,13 @@ export class CreateUserDto {
   birthdate: Date;
 
   @ApiProperty({
-    example: 3517891302,
+    example: '3517891302',
     description: 'It must contain a valid telephone number',
   })
   @IsNotEmpty()
   @IsNumber()
-  phone: number;
+  @Matches(/^\d{10,15}$/)
+  phone: string;
 
   @ApiProperty({
     example: 34568971,
@@ -82,6 +83,7 @@ export class CreateUserDto {
   })
   @IsNotEmpty()
   @IsNumber()
+  @MaxLength(8)
   dni: number;
 
   @ApiProperty({

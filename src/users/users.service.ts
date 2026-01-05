@@ -8,7 +8,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
   ) {}
-  getAllUsers() {
-    return this.userRepository.find();
+  async getAllUsers() {
+    return await this.userRepository.find();
   }
 }
