@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -10,6 +12,7 @@ import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
 import { UpdateUserStatusDto } from './dtos/updateStatus.dto';
 import { UpdateUserAdminDto } from './dtos/updateUser-Admin.dto';
+import { Rol } from 'src/common/enum/roles.enum';
 
 @Injectable()
 export class UsersService {
@@ -18,7 +21,15 @@ export class UsersService {
   ) {}
 
   async getAllUsers() {
-    return await this.userRepository.find();
+    try {
+      return await this.userRepository.find({
+        select: {
+          password: false,
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error fetching users');
+    }
   }
 
   async getUserById(id: string) {
@@ -50,7 +61,14 @@ export class UsersService {
   }
 
   async updateStatus(id: string, dto: UpdateUserStatusDto) {
-    const user = await this.getUserById(id);
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.status === dto.status) {
+      throw new BadRequestException('User already has this status');
+    }
+    if (user.rol === Rol.superAdmin) {
+      throw new ForbiddenException('Cannot change SuperAdmin status');
+    }
     if (dto.status === UserStatus.banned) {
       //cancelar reservas
     }
