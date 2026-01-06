@@ -38,4 +38,10 @@ export class UsersService {
     await this.userRepository.update(userId, dto);
     return this.getUserById(userId);
   }
+
+  async updateUser(id: string, dto: UpdateUserDto) {
+    const user = await this.getUserById(id);
+    Object.assign(user, dto);
+    return this.userRepository.save(user);
+  }
 }
