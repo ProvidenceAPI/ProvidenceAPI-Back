@@ -67,4 +67,34 @@ export class UsersController {
   updateMyProfile(@Req() req, @Body() dto: UpdateUserDto) {
     return this.userService.updateMyProfile(req.user.sub, dto);
   }
+
+  @ApiOperation({ summary: 'Update user profile by ID' })
+  @ApiOkResponse({ description: 'Updated profile' })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Put(':id')
+  @Roles(Rol.superAdmin)
+  updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userService.updateUser(id, dto);
+  }
+
+  @ApiOperation({ summary: 'Update user or administrator status' })
+  @ApiOkResponse({ description: 'Updated status' })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Put(':id/status')
+  @Roles(Rol.superAdmin)
+  updateUserStatus(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userService.updateStatus(id, dto);
+  }
+
+  @ApiOperation({ summary: 'Convert user to administrator' })
+  @ApiOkResponse({ description: 'Updated role' })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Put('admin/:id')
+  @Roles(Rol.superAdmin)
+  createAdmin(@Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.createAdmin(id);
+  }
 }
