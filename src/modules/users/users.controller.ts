@@ -1,0 +1,100 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Put,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { UsersService } from './users.service';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiForbiddenResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { Roles } from 'src/common/decorators/roles.decorators';
+import { Rol } from 'src/common/enum/roles.enum';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { AuthGuard } from '@nestjs/passport';
+import { UpdateUserDto } from './dtos/update-user.dto';
+
+@Controller('users')
+@UseGuards(AuthGuard('jwt'), RolesGuard)
+@ApiBearerAuth()
+export class UsersController {
+  constructor(private readonly userService: UsersService) {}
+
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiOkResponse({ description: 'User list' })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @Get()
+  @Roles(Rol.admin, Rol.superAdmin)
+  getAllUsers() {
+    return this.userService.getAllUsers();
+  }
+
+  @ApiOperation({ summary: 'Get user by id' })
+  @ApiOkResponse({ description: 'User found' })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse()
+  @ApiNotFoundResponse()
+  @Get(':id')
+  @Roles(Rol.superAdmin, Rol.admin)
+  getUserById(@Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.getUserById(id);
+  }
+
+  @ApiOperation({ summary: 'See my profile' })
+  @ApiOkResponse({ description: 'User profile' })
+  @ApiUnauthorizedResponse()
+  @Get('me')
+  getMyProfile(@Req() req) {
+    return this.userService.getMyProfile(req.user.sub);
+  }
+
+  @ApiOperation({ summary: 'Edit my profile' })
+  @ApiOkResponse({ description: 'Updated profile' })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Put('me')
+  updateMyProfile(@Req() req, @Body() dto: UpdateUserDto) {
+    return this.userService.updateMyProfile(req.user.sub, dto);
+  }
+
+  @ApiOperation({ summary: 'Update user profile by ID' })
+  @ApiOkResponse({ description: 'Updated profile' })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Put(':id')
+  @Roles(Rol.superAdmin)
+  updateUser(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userService.updateUser(id, dto);
+  }
+
+  @ApiOperation({ summary: 'Update user or administrator status' })
+  @ApiOkResponse({ description: 'Updated status' })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Put(':id/status')
+  @Roles(Rol.superAdmin)
+  updateUserStatus(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userService.updateStatus(id, dto);
+  }
+
+  @ApiOperation({ summary: 'Convert user to administrator' })
+  @ApiOkResponse({ description: 'Updated role' })
+  @ApiBadRequestResponse()
+  @ApiUnauthorizedResponse()
+  @Put('admin/:id')
+  @Roles(Rol.superAdmin)
+  createAdmin(@Param('id', ParseUUIDPipe) id: string) {
+    return this.userService.createAdmin(id);
+  }
+}
