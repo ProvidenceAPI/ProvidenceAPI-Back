@@ -13,6 +13,7 @@ import { Rol } from 'src/common/enum/roles.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
 import { SignupDto } from './dtos/singup.dto';
 import { SigninDto } from './dtos/singin.dto';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,21 @@ export class AuthService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     private readonly jwtService: JwtService,
+    private readonly usersService: UsersService,
   ) {}
+
+  async validateUser(email: string, password: string) {
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) return null;
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) return null;
+
+    const { password: _, ...result } = user;
+    return result;
+  }
 
   private validateAge(birthdate: Date): void {
     const today = new Date();

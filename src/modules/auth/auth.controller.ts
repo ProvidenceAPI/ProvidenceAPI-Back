@@ -1,8 +1,16 @@
-import { Body, Controller, HttpCode, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SignupDto } from './dtos/singup.dto';
 import { SigninDto } from './dtos/singin.dto';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -17,16 +25,32 @@ export class AuthController {
     status: 400,
     description: 'Invalid data or user already exists',
   })
-  signup(@Body() user: SignupDto) {
+  async signup(@Body() user: SignupDto) {
     return this.authService.createUser(user);
   }
+
+  @UseGuards(AuthGuard('local'))
   @Post('signin')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Sing in' })
+  @ApiOperation({ summary: 'Sign in' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          example: 'user@email.com',
+        },
+        password: {
+          type: 'string',
+          example: 'Password123*',
+        },
+      },
+      required: ['email', 'password'],
+    },
+  })
   @ApiResponse({ status: 200, description: 'Login successful' })
-  @ApiResponse({ status: 400, description: 'Invalid credentials' })
-  @ApiResponse({ status: 401, description: 'User banned or cancelled' })
-  signin(@Body() credentials: SigninDto) {
-    return this.authService.signin(credentials);
+  signin(@Req() req) {
+    return this.authService.signin(req.user);
   }
 }

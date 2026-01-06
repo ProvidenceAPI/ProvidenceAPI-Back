@@ -1,18 +1,19 @@
 import { registerAs } from '@nestjs/config';
 import { config as dotenvConfig } from 'dotenv';
 
-dotenvConfig({ path: '.env.development' });
+dotenvConfig({
+  path: process.env.NODE_ENV === 'production' ? '.env' : '.env.development',
+});
 
-export const config = {
+export default registerAs('typeorm', () => ({
   type: 'postgres',
   database: process.env.DB_NAME,
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 5432,
+  port: Number(process.env.DB_PORT) || 5432,
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
+  autoLoadEntities: true,
   dropSchema: false,
-  synchronize: true,
-  logging: true,
-};
-
-export default registerAs('typeorm', () => config);
+  synchronize: process.env.NODE_ENV !== 'production',
+  logging: process.env.NODE_ENV === 'development',
+}));
