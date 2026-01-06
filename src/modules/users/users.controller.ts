@@ -23,6 +23,7 @@ import { Rol } from 'src/common/enum/roles.enum';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { UpdateUserStatusDto } from './dtos/updateStatus.dto';
 
 @Controller('users')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -84,17 +85,7 @@ export class UsersController {
   @ApiUnauthorizedResponse()
   @Put(':id/status')
   @Roles(Rol.superAdmin)
-  updateUserStatus(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+  updateUserStatus(@Param('id') id: string, @Body() dto: UpdateUserStatusDto) {
     return this.userService.updateStatus(id, dto);
-  }
-
-  @ApiOperation({ summary: 'Convert user to administrator' })
-  @ApiOkResponse({ description: 'Updated role' })
-  @ApiBadRequestResponse()
-  @ApiUnauthorizedResponse()
-  @Put('admin/:id')
-  @Roles(Rol.superAdmin)
-  createAdmin(@Param('id', ParseUUIDPipe) id: string) {
-    return this.userService.createAdmin(id);
   }
 }
