@@ -9,7 +9,6 @@ import {
 import { AuthService } from './auth.service';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SignupDto } from './dtos/singup.dto';
-import { SigninDto } from './dtos/singin.dto';
 import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('Auth')

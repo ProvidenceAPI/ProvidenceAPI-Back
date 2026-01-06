@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from './entities/users.entity';
+import { User } from '../../users/entities/users.entity';
 import { Repository } from 'typeorm';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
@@ -74,5 +74,11 @@ export class UsersService {
     }
     user.status = dto.status;
     return this.userRepository.save(user);
+  }
+
+  async findByEmail(email: string) {
+    return await this.userRepository.findOne({
+      where: { email },
+    });
   }
 }
