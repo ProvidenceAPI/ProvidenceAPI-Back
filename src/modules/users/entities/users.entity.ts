@@ -1,7 +1,8 @@
 import { Genre } from 'src/common/enum/genre.enum';
 import { Rol } from 'src/common/enum/roles.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 
 @Entity({
   name: 'users',
@@ -36,6 +37,9 @@ export class User {
   @Column({ type: 'bigint', unique: true })
   dni: number;
 
+  @Column({ type: 'varchar', nullable: true })
+  profileImage: string;
+
   @Column({
     type: 'enum',
     enum: Genre,
@@ -56,4 +60,7 @@ export class User {
     default: Rol.user,
   })
   rol: Rol;
+
+  @OneToMany(() => Reservation, (reservation) => reservation.user)
+  reservations: Reservation[];
 }
