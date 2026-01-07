@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
-<<<<<<< HEAD
-
 import { AuthModule } from './modules/auth/auth.modules';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import typeorm from './config/typeorm';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -17,28 +16,20 @@ import { JwtModule } from '@nestjs/jwt';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => config.get('typeorm')!,
     }),
-    JwtModule.register({
+    JwtModule.registerAsync({
       global: true,
-      secret: process.env.JWT_SECRET,
-      signOptions: {
-        expiresIn: '1h',
-      },
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: '1h',
+        },
+      }),
     }),
-
     AuthModule,
+    UsersModule,
   ],
   controllers: [],
   providers: [],
-=======
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from './users/entities/users.entity';
-
-@Module({
-  imports: [TypeOrmModule.forFeature([User])],
-  controllers: [AppController],
-  providers: [AppService],
->>>>>>> e66ec6edeca5f98e11f9247ec033857ce7075ba4
 })
 export class AppModule {}

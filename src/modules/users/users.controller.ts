@@ -16,6 +16,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Roles } from 'src/common/decorators/roles.decorators';
@@ -25,6 +26,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UpdateUserStatusDto } from './dtos/updateStatus.dto';
 
+@ApiTags('Users')
 @Controller('users')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 @ApiBearerAuth()
