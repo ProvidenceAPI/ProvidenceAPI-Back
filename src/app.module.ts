@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { AuthModule } from './modules/auth/auth.modules';
+import { AuthModule } from './modules/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import typeorm from './config/typeorm';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
-import { UsersModule } from './modules/users/users.module';
+import { UserModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -27,7 +27,7 @@ import { UsersModule } from './modules/users/users.module';
       }),
     }),
     AuthModule,
-    UsersModule,
+    UserModule,
   ],
   controllers: [],
   providers: [],

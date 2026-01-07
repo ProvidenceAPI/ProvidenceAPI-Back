@@ -4,7 +4,7 @@ import { Rol } from 'src/common/enum/roles.enum';
 export class UpdateUserAdminDto {
   @IsOptional()
   @IsString()
-  name?: string;
+  email?: string;
 
   @IsOptional()
   @IsString()
