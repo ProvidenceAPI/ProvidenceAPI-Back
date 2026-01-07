@@ -13,6 +13,7 @@ import { Rol } from 'src/common/enum/roles.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
 import { SignupDto } from './dtos/singup.dto';
 import { UsersService } from 'src/modules/users/users.service';
+import { Genre } from 'src/common/enum/genre.enum';
 
 @Injectable()
 export class AuthService {
@@ -113,6 +114,59 @@ export class AuthService {
     const token = this.jwtService.sign(payload);
 
     const { password, ...userWithoutPassword } = user;
+
+    return {
+      message: 'Login successful',
+      access_token: token,
+    };
+  }
+
+  async validateGoogleUser(googleUser: any) {
+    const { email, firstName, lastName, picture } = googleUser;
+
+    let user = await this.usersRepository.findOne({
+      where: { email },
+    });
+
+    if (!user) {
+      user = this.usersRepository.create({
+        email,
+        name: firstName,
+        lastname: lastName,
+        password: 'GOOGLE_AUTH',
+        birthdate: new Date('2000-01-01'),
+        phone: '0000000000',
+        dni: Math.floor(Math.random() * 1000000000),
+        genre: Genre.other,
+        profileImage: picture || null,
+      });
+
+      await this.usersRepository.save(user);
+    }
+
+    return user;
+  }
+
+  async googleLogin(user: any) {
+    const validatedUser = await this.validateGoogleUser(user);
+
+    if (validatedUser.status === UserStatus.banned) {
+      throw new UnauthorizedException(
+        'Your account has been banned. Contact the administrator',
+      );
+    }
+
+    if (validatedUser.status === UserStatus.cancelled) {
+      throw new UnauthorizedException('Your account has been cancelled');
+    }
+
+    const payload = {
+      id: validatedUser.id,
+      email: validatedUser.email,
+      rol: validatedUser.rol,
+    };
+
+    const token = this.jwtService.sign(payload);
 
     return {
       message: 'Login successful',
