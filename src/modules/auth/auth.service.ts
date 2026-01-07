@@ -12,7 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Rol } from 'src/common/enum/roles.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
 import { SignupDto } from './dtos/singup.dto';
-import { SigninDto } from './dtos/singin.dto';
+import { UsersService } from 'src/modules/users/users.service';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +20,21 @@ export class AuthService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     private readonly jwtService: JwtService,
+    private readonly usersService: UsersService,
   ) {}
+
+  async validateUser(email: string, password: string) {
+    const user = await this.usersService.findByEmail(email);
+
+    if (!user) return null;
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) return null;
+
+    const { password: _, ...result } = user;
+    return result;
+  }
 
   private validateAge(birthdate: Date): void {
     const today = new Date();
@@ -79,53 +93,31 @@ export class AuthService {
     }
   }
 
-  async signin(Credentials: SigninDto) {
-    const findUser = await this.usersRepository.findOneBy({
-      email: Credentials.email,
-    });
-    if (!findUser) throw new BadRequestException('Invalid credentials');
-
-    if (findUser.status === UserStatus.banned) {
+  signin(user: User) {
+    if (user.status === UserStatus.banned) {
       throw new UnauthorizedException(
         'Your account has been banned. Contact the administrator',
       );
     }
 
-    if (findUser.status === UserStatus.cancelled) {
+    if (user.status === UserStatus.cancelled) {
       throw new UnauthorizedException('Your account has been cancelled');
     }
-    try {
-      const matchingPasswords = await bcrypt.compare(
-        Credentials.password,
-        findUser.password,
-      );
 
-      if (!matchingPasswords)
-        throw new BadRequestException('Invalid credentials');
+    const payload = {
+      id: user.id,
+      email: user.email,
+      rol: user.rol,
+    };
 
-      const payload = {
-        id: findUser.id,
-        email: findUser.email,
-        rol: findUser.rol,
-      };
+    const token = this.jwtService.sign(payload);
 
-      const token = this.jwtService.sign(payload);
+    const { password, ...userWithoutPassword } = user;
 
-      const { password, ...userWithoutPassword } = findUser;
-
-      return {
-        message: 'Login Successful',
-        access_token: token,
-        user: userWithoutPassword,
-      };
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof UnauthorizedException
-      ) {
-        throw error;
-      }
-      throw new BadRequestException('Error in the login process');
-    }
+    return {
+      message: 'Login successful',
+      access_token: token,
+      user: userWithoutPassword,
+    };
   }
 }

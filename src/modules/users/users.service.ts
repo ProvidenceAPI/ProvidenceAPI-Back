@@ -75,4 +75,10 @@ export class UsersService {
     user.status = dto.status;
     return this.userRepository.save(user);
   }
+
+  async findByEmail(email: string) {
+    return await this.userRepository.findOne({
+      where: { email },
+    });
+  }
 }
