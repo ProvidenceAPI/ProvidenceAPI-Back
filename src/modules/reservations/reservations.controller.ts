@@ -33,38 +33,50 @@ import { ReservationsService } from './reservations.service';
 export class ReservationsController {
   constructor(private readonly service: ReservationsService) {}
 
+  @Get('me')
+  @Roles(Rol.user)
+  @ApiOperation({ summary: 'Get my reservation history' })
+  @ApiResponse({ status: 200, description: 'Reservation history' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getMyReservations(@Req() req) {
+    return this.service.getMyReservations(req.user.id);
+  }
+
   @Post()
   @Roles(Rol.user)
   @ApiOperation({ summary: 'Create a reservation' })
-  @ApiResponse({ status: 201, description: 'Reservation created' })
-  @ApiBadRequestResponse()
-  @ApiUnauthorizedResponse()
-  @ApiForbiddenResponse()
+  @ApiResponse({ status: 201, description: 'Reservation created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid date or time range' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'User is banned or cancelled' })
+  @ApiResponse({ status: 409, description: 'Time slot already reserved' })
   create(@Req() req, @Body() dto: CreateReservationDto) {
     return this.service.createReservation(req.user.id, dto);
   }
 
   @Put(':id/cancel')
   @ApiOperation({ summary: 'Cancel a reservation' })
-  @ApiResponse({ status: 200, description: 'Reservation cancelled' })
-  @ApiNotFoundResponse()
-  @ApiForbiddenResponse()
+  @ApiResponse({
+    status: 200,
+    description: 'Reservation cancelled successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Reservation already cancelled' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({
+    status: 403,
+    description: 'Not allowed to cancel this reservation',
+  })
+  @ApiResponse({ status: 404, description: 'Reservation not found' })
   cancel(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.cancelReservation(id, req.user);
   }
 
-  @Get('me')
-  @Roles(Rol.user)
-  @ApiOperation({ summary: 'Get my reservation history' })
-  @ApiResponse({ status: 200, description: 'Reservation history' })
-  getMyReservations(@Req() req) {
-    return this.service.getMyReservations(req.user.id);
-  }
-
   @Get()
   @Roles(Rol.admin, Rol.superAdmin)
-  @ApiOperation({ summary: 'Get all reservations (admin)' })
-  @ApiResponse({ status: 200, description: 'All reservations' })
+  @ApiOperation({ summary: 'Get all reservations (Admin)' })
+  @ApiResponse({ status: 200, description: 'All reservations list' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden – Admin role required' })
   getAllReservations() {
     return this.service.getAllReservations();
   }
