@@ -14,6 +14,7 @@ import { UserStatus } from 'src/common/enum/userStatus.enum';
 import { SignupDto } from './dtos/singup.dto';
 import { UsersService } from 'src/modules/users/users.service';
 import { Genre } from 'src/common/enum/genre.enum';
+import { AuthProvider } from 'src/common/enum/authProvider.enum';
 
 @Injectable()
 export class AuthService {
@@ -147,30 +148,54 @@ export class AuthService {
     return user;
   }
 
-  async googleLogin(user: any) {
-    const validatedUser = await this.validateGoogleUser(user);
-
+  async googleSignup(googleUser: any) {
+    const validatedUser = await this.validateGoogleUser(googleUser);
     if (validatedUser.status === UserStatus.banned) {
       throw new UnauthorizedException(
         'Your account has been banned. Contact the administrator',
       );
     }
-
     if (validatedUser.status === UserStatus.cancelled) {
       throw new UnauthorizedException('Your account has been cancelled');
     }
-
     const payload = {
       id: validatedUser.id,
       email: validatedUser.email,
       rol: validatedUser.rol,
     };
-
     const token = this.jwtService.sign(payload);
-
     return {
       message: 'Login successful',
       access_token: token,
+    };
+  }
+
+  async googleLogin(googleUser: any) {
+    const { email } = googleUser;
+    const user = await this.usersRepository.findOne({
+      where: { email },
+    });
+    if (!user) {
+      throw new UnauthorizedException(
+        'No account found. Please sign up with Google first.',
+      );
+    }
+    if (user.provider !== AuthProvider.GOOGLE) {
+      throw new UnauthorizedException(
+        'This email was registered with password login',
+      );
+    }
+    if (user.status !== UserStatus.active) {
+      throw new UnauthorizedException('User is not active');
+    }
+
+    const payload = {
+      id: user.id,
+      email: user.email,
+      rol: user.rol,
+    };
+    return {
+      access_token: this.jwtService.sign(payload),
     };
   }
 }

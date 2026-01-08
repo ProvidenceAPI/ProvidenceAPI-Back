@@ -25,10 +25,13 @@ export class Reservation {
   @Column({
     type: 'enum',
     enum: ReservationStatus,
-    default: ReservationStatus.pending,
+    default: ReservationStatus.confirmed,
   })
   status: ReservationStatus;
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @ManyToOne(() => User, (user) => user.reservations, { eager: true })
+  user: User;
 }
