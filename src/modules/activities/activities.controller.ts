@@ -31,7 +31,6 @@ import { Rol } from 'src/common/enum/roles.enum';
 @Controller('activities')
 export class ActivitiesController {
   constructor(private readonly activitiesService: ActivitiesService) {}
-
   @Get()
   @ApiOperation({ summary: 'Get all activities with optional filters' })
   @ApiResponse({
