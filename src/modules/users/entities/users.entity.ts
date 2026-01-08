@@ -38,7 +38,7 @@ export class User {
   dni: number;
 
   @Column({ type: 'varchar', nullable: true })
-  profileImage: string;
+  profileImage?: string;
 
   @Column({
     type: 'enum',
@@ -60,4 +60,7 @@ export class User {
     default: Rol.user,
   })
   rol: Rol;
+
+  @OneToMany(() => Reservation, (reservation) => reservation.user)
+  reservations: Reservation[];
 }

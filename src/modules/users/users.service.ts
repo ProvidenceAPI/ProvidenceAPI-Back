@@ -13,11 +13,15 @@ import { UserStatus } from 'src/common/enum/userStatus.enum';
 import { UpdateUserStatusDto } from './dtos/updateStatus.dto';
 import { UpdateUserAdminDto } from './dtos/updateUser-Admin.dto';
 import { Rol } from 'src/common/enum/roles.enum';
+import { FileUploadService } from '../file-upload/file-upload.service';
+import { ReservationsService } from '../reservations/reservations.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
+    private readonly fileUploadService: FileUploadService,
+    private readonly reservationsService: ReservationsService,
   ) {}
 
   async getAllUsers() {
@@ -63,14 +67,12 @@ export class UsersService {
   async updateStatus(id: string, dto: UpdateUserStatusDto) {
     const user = await this.userRepository.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
-    if (user.status === dto.status) {
+    if (user.status === dto.status)
       throw new BadRequestException('User already has this status');
-    }
-    if (user.rol === Rol.superAdmin) {
+    if (user.rol === Rol.superAdmin)
       throw new ForbiddenException('Cannot change SuperAdmin status');
-    }
     if (dto.status === UserStatus.banned) {
-      //cancelar reservas
+      await this.reservationsService.cancelAllActiveReservationsByUser(id);
     }
     user.status = dto.status;
     return this.userRepository.save(user);
@@ -80,5 +82,27 @@ export class UsersService {
     return await this.userRepository.findOne({
       where: { email },
     });
+  }
+
+  async updateProfileImage(
+    userId: string,
+    file?: Express.Multer.File,
+    imageUrl?: string,
+  ) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+    if (user?.status === UserStatus.banned) throw new ForbiddenException();
+
+    let finalUrl: string;
+    if (file) {
+      finalUrl = await this.fileUploadService.uploadImage(file);
+    } else if (imageUrl) {
+      finalUrl = imageUrl;
+    } else {
+      throw new BadRequestException();
+    }
+    user.profileImage = finalUrl;
+    await this.userRepository.save(user);
+    return user;
   }
 }

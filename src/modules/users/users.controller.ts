@@ -1,12 +1,17 @@
 import {
   Body,
   Controller,
+  FileTypeValidator,
   Get,
+  MaxFileSizeValidator,
   Param,
+  ParseFilePipe,
   ParseUUIDPipe,
   Put,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import {
@@ -25,6 +30,7 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UpdateUserStatusDto } from './dtos/updateStatus.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Users')
 @Controller('users')
@@ -89,5 +95,23 @@ export class UsersController {
   @Roles(Rol.superAdmin)
   updateUserStatus(@Param('id') id: string, @Body() dto: UpdateUserStatusDto) {
     return this.userService.updateStatus(id, dto);
+  }
+
+  @Put('profile/image')
+  @UseInterceptors(FileInterceptor('file'))
+  updateProfileImage(
+    @Req() req,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 2_000_000 }),
+          new FileTypeValidator({ fileType: /(png|jpg|jpeg|webp)$/ }),
+        ],
+      }),
+    )
+    file?: Express.Multer.File,
+    @Body('imageUrl') imageUrl?: string,
+  ) {
+    return this.userService.updateProfileImage(req.user.id, file, imageUrl);
   }
 }
