@@ -1,12 +1,7 @@
 import { registerAs } from '@nestjs/config';
 import { config as dotenvConfig } from 'dotenv';
 
-dotenvConfig({
-  path:
-    process.env.NODE_ENV === 'production'
-      ? '.env.production'
-      : '.env.development',
-});
+dotenvConfig();
 
 export default registerAs('typeorm', () => {
   if (process.env.DATABASE_URL) {
@@ -15,7 +10,7 @@ export default registerAs('typeorm', () => {
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
       synchronize: true, //process.env.NODE_ENV !== 'production',
-      logging: process.env.NODE_ENV === 'development',
+      logging: true,
       ssl:
         process.env.NODE_ENV === 'production'
           ? {
