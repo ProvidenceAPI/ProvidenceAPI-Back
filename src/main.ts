@@ -18,7 +18,7 @@ async function bootstrap() {
   app.enableCors({
     origin:
       process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL // URL de Vercel en producción
+        ? process.env.FRONTEND_URL
         : ['http://localhost:3002'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
