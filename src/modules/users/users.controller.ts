@@ -59,7 +59,7 @@ export class UsersController {
   @ApiUnauthorizedResponse()
   @Get('me')
   getMyProfile(@Req() req) {
-    return this.userService.getMyProfile(req.user.sub);
+    return this.userService.getMyProfile(req.user.id);
   }
 
   @ApiOperation({ summary: 'Edit my profile' })
@@ -68,7 +68,7 @@ export class UsersController {
   @ApiUnauthorizedResponse()
   @Put('me')
   updateMyProfile(@Req() req, @Body() dto: UpdateUserDto) {
-    return this.userService.updateMyProfile(req.user.sub, dto);
+    return this.userService.updateMyProfile(req.user.id, dto);
   }
 
   @ApiOperation({ summary: 'Update user profile by ID' })

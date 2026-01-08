@@ -60,7 +60,4 @@ export class User {
     default: Rol.user,
   })
   rol: Rol;
-
-  @OneToMany(() => Reservation, (reservation) => reservation.user)
-  reservations: Reservation[];
 }

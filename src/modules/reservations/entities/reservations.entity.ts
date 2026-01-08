@@ -31,7 +31,4 @@ export class Reservation {
 
   @CreateDateColumn()
   createdAt: Date;
-
-  @ManyToOne(() => User, (user) => user.reservations, { eager: true })
-  user: User;
 }
