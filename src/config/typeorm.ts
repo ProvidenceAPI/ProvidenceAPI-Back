@@ -9,12 +9,14 @@ dotenvConfig({
 });
 
 export default registerAs('typeorm', () => {
+  // Si existe DATABASE_URL (Railway), úsala
   if (process.env.DATABASE_URL) {
     return {
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
       synchronize: process.env.NODE_ENV !== 'production',
+      dropSchema: false,
       logging: process.env.NODE_ENV === 'development',
       ssl:
         process.env.NODE_ENV === 'production'
@@ -34,6 +36,7 @@ export default registerAs('typeorm', () => {
     password: process.env.DB_PASSWORD,
     autoLoadEntities: true,
     synchronize: process.env.NODE_ENV !== 'production',
+    dropSchema: false, // 👈 false para NO borrar datos
     logging: process.env.NODE_ENV === 'development',
   };
 });
