@@ -46,7 +46,7 @@ export class Activity {
   schedule: string[];
 
   @Column({ type: 'varchar', nullable: true })
-  image: string; // URL de Cloudinary
+  image: string;
 
   @Column({
     type: 'enum',
