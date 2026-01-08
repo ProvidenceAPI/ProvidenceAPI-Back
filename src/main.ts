@@ -15,11 +15,16 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Configuración de CORS
   app.enableCors({
     origin:
       process.env.NODE_ENV === 'production'
         ? process.env.FRONTEND_URL
-        : ['http://localhost:3002'],
+        : [
+            'http://localhost:3001',
+            'http://localhost:5173',
+            'http://localhost:3000',
+          ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -40,6 +45,7 @@ async function bootstrap() {
     .addBearerAuth()
     .addTag('Auth', 'Authentication endpoints')
     .addTag('Users', 'User management endpoints')
+    .addTag('Activities', 'Activity management endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
