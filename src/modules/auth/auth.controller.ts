@@ -56,24 +56,22 @@ export class AuthController {
     return this.authService.signin(req.user);
   }
 
-  @Get('google')
+  @Get('google/signup')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Login with Google' })
   @ApiResponse({ status: 200, description: 'Redirects to Google OAuth' })
-  async googleAuth() {
-    // Inicia el flujo de OAuth con Google
-  }
+  async googleSignup() {}
 
-  @Get('google/callback')
+  @Get('google/signup/callback')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Google OAuth callback' })
   @ApiResponse({
     status: 302,
     description: 'Redirects to frontend with token',
   })
-  async googleAuthCallback(@Req() req, @Res() res: Response) {
+  async googleSignupCallback(@Req() req, @Res() res: Response) {
     try {
-      const token = await this.authService.googleLogin(req.user);
+      const token = await this.authService.googleSignup(req.user);
 
       // Redirige al frontend con el token en la URL
       res.redirect(
@@ -82,5 +80,19 @@ export class AuthController {
     } catch (err) {
       res.status(500).send({ success: false, message: err.message });
     }
+  }
+
+  @Get('google/login')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Login with Google' })
+  googleLogin() {}
+
+  @Get('google/login/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleLoginCallback(@Req() req, @Res() res: Response) {
+    const result = await this.authService.googleLogin(req.user);
+    res.redirect(
+      `${process.env.FRONTEND_URL}/oauth/login?token=${result.access_token}`,
+    );
   }
 }
