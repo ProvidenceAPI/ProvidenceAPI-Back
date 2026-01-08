@@ -29,6 +29,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UpdateUserStatusDto } from './dtos/updateStatus.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { UpdateUserAdminDto } from './dtos/updateUser-Admin.dto';
+import { CompleteGoogleProfileDto } from './dtos/complete-google.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
@@ -85,6 +87,12 @@ export class UsersController {
     return this.userService.updateProfileImage(req.user.id, file, imageUrl);
   }
 
+  @Put('me/complete-profile')
+  @UseGuards(AuthGuard('jwt'))
+  completeProfile(@Req() req, @Body() dto: CompleteGoogleProfileDto) {
+    return this.userService.completeGoogleProfile(req.user.id, dto);
+  }
+
   @Get()
   @Roles(Rol.admin, Rol.superAdmin)
   @ApiOperation({ summary: 'Get all users (Admin)' })
@@ -114,7 +122,7 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   updateUser(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateUserDto,
+    @Body() dto: UpdateUserAdminDto,
   ) {
     return this.userService.updateUser(id, dto);
   }

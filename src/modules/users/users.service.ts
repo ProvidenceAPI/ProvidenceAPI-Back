@@ -15,6 +15,8 @@ import { UpdateUserAdminDto } from './dtos/updateUser-Admin.dto';
 import { Rol } from 'src/common/enum/roles.enum';
 import { FileUploadService } from '../file-upload/file-upload.service';
 import { ReservationsService } from '../reservations/reservations.service';
+import { AuthProvider } from 'src/common/enum/authProvider.enum';
+import { CompleteGoogleProfileDto } from './dtos/complete-google.dto';
 
 @Injectable()
 export class UsersService {
@@ -55,6 +57,20 @@ export class UsersService {
   async updateMyProfile(userId: string, dto: UpdateUserDto) {
     await this.userRepository.update(userId, dto);
     return this.getUserById(userId);
+  }
+
+  async completeGoogleProfile(userId: string, dto: CompleteGoogleProfileDto) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user || user.provider !== AuthProvider.GOOGLE)
+      throw new BadRequestException('Only Google users can complete profile');
+
+    user.dni = dto.dni;
+    user.phone = dto.phone;
+    user.birthdate = dto.birthdate;
+    user.status = UserStatus.active;
+
+    return this.userRepository.save(user);
   }
 
   async updateUser(id: string, dto: UpdateUserAdminDto) {
