@@ -19,11 +19,7 @@ async function bootstrap() {
     origin:
       process.env.NODE_ENV === 'production'
         ? process.env.FRONTEND_URL // URL de Vercel en producción
-        : [
-            'http://localhost:5173',
-            'http://localhost:3001',
-            'http://localhost:5174',
-          ],
+        : ['http://localhost:3002'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
