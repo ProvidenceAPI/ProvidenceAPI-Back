@@ -1,3 +1,4 @@
+import { AuthProvider } from 'src/common/enum/authProvider.enum';
 import { Genre } from 'src/common/enum/genre.enum';
 import { Rol } from 'src/common/enum/roles.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
@@ -60,6 +61,13 @@ export class User {
     default: Rol.user,
   })
   rol: Rol;
+
+  @Column({
+    type: 'enum',
+    enum: AuthProvider,
+    default: AuthProvider.LOCAL,
+  })
+  provider: AuthProvider;
 
   @OneToMany(() => Reservation, (reservation) => reservation.user)
   reservations: Reservation[];
