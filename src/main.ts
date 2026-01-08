@@ -15,7 +15,19 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors(); // url del fronted debe colocarse aca!! recordarlo
+  app.enableCors({
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? process.env.FRONTEND_URL // URL de Vercel en producción
+        : [
+            'http://localhost:5173',
+            'http://localhost:3001',
+            'http://localhost:5174',
+          ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -37,13 +49,11 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
 
-  console.log(
-    `🚀 Application is running on: http://localhost:${process.env.PORT ?? 3000}`,
-  );
-  console.log(
-    `📚 Swagger documentation: http://localhost:${process.env.PORT ?? 3000}/api/docs`,
-  );
+  console.log(`🚀 Application is running on: http://localhost:${port}`);
+  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 bootstrap();
