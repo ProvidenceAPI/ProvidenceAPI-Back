@@ -71,11 +71,26 @@ export class AuthController {
   })
   async googleSignupCallback(@Req() req, @Res() res: Response) {
     try {
-      const token = await this.authService.googleSignup(req.user);
+      const result = await this.authService.googleSignup(req.user);
 
-      // Redirige al frontend con el token en la URL
+      // Usar datos de req.user (vienen de Google Strategy)
+      const googleUser: any = req.user; // Cast a any para evitar errores de tipo
+      const userData = {
+        id: 'google-user',
+        name:
+          googleUser.firstName +
+          (googleUser.lastName ? ' ' + googleUser.lastName : ''),
+        email: googleUser.email,
+        profileImage: googleUser.picture || null,
+        phone: null,
+      };
+
+      const userEncoded = Buffer.from(JSON.stringify(userData)).toString(
+        'base64',
+      );
+
       res.redirect(
-        `${process.env.FRONTEND_URL}/oauth?token=${token.access_token}`,
+        `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}&user=${userEncoded}`,
       );
     } catch (err) {
       res.status(500).send({ success: false, message: err.message });
@@ -90,17 +105,55 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Req() req, @Res() res: Response) {
     try {
-      // Intenta hacer login si el usuario existe
+      // Intenta login
       const result = await this.authService.googleLogin(req.user);
+
+      // Usar datos de req.user (vienen de Google Strategy)
+      const googleUser: any = req.user; // Cast a any para evitar errores de tipo
+      const userData = {
+        id: 'google-user',
+        name:
+          googleUser.firstName +
+          (googleUser.lastName ? ' ' + googleUser.lastName : ''),
+        email: googleUser.email,
+        profileImage: googleUser.picture || null,
+        phone: null,
+      };
+
+      const userEncoded = Buffer.from(JSON.stringify(userData)).toString(
+        'base64',
+      );
+
       res.redirect(
-        `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}`,
+        `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}&user=${userEncoded}`,
       );
     } catch (error) {
-      // Si no existe, lo registra
-      const token = await this.authService.googleSignup(req.user);
-      res.redirect(
-        `${process.env.FRONTEND_URL}/oauth?token=${token.access_token}`,
-      );
+      // Si falla login, intenta signup
+      try {
+        const token = await this.authService.googleSignup(req.user);
+
+        // Usar datos de req.user (vienen de Google Strategy)
+        const googleUser: any = req.user; // Cast a any para evitar errores de tipo
+        const userData = {
+          id: 'google-user',
+          name:
+            googleUser.firstName +
+            (googleUser.lastName ? ' ' + googleUser.lastName : ''),
+          email: googleUser.email,
+          profileImage: googleUser.picture || null,
+          phone: null,
+        };
+
+        const userEncoded = Buffer.from(JSON.stringify(userData)).toString(
+          'base64',
+        );
+
+        res.redirect(
+          `${process.env.FRONTEND_URL}/oauth?token=${token.access_token}&user=${userEncoded}`,
+        );
+      } catch (err) {
+        res.status(500).send({ success: false, message: err.message });
+      }
     }
   }
 
@@ -112,9 +165,30 @@ export class AuthController {
   @Get('google/login/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginCallback(@Req() req, @Res() res: Response) {
-    const result = await this.authService.googleLogin(req.user);
-    res.redirect(
-      `${process.env.FRONTEND_URL}/oauth/login?token=${result.access_token}`,
-    );
+    try {
+      const result = await this.authService.googleLogin(req.user);
+
+      // Usar datos de req.user (vienen de Google Strategy)
+      const googleUser: any = req.user; // Cast a any para evitar errores de tipo
+      const userData = {
+        id: 'google-user',
+        name:
+          googleUser.firstName +
+          (googleUser.lastName ? ' ' + googleUser.lastName : ''),
+        email: googleUser.email,
+        profileImage: googleUser.picture || null,
+        phone: null,
+      };
+
+      const userEncoded = Buffer.from(JSON.stringify(userData)).toString(
+        'base64',
+      );
+
+      res.redirect(
+        `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}&user=${userEncoded}`,
+      );
+    } catch (err) {
+      res.status(500).send({ success: false, message: err.message });
+    }
   }
 }
