@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   FileTypeValidator,
@@ -56,8 +57,22 @@ export class UsersController {
     return this.userService.updateMyProfile(req.user.id, dto);
   }
 
-  @Put('profile/image')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/^image\/(png|jpg|jpeg|webp)$/)) {
+          return cb(
+            new BadRequestException('Only image files are allowed'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 2_000_000,
+      },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Update profile image' })
   @ApiBody({
@@ -65,26 +80,43 @@ export class UsersController {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary' },
-        imageUrl: { type: 'string', example: 'https://...' },
       },
     },
   })
   @ApiResponse({ status: 200, description: 'Profile image updated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  updateProfileImage(
-    @Req() req,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({ maxSize: 2_000_000 }),
-          new FileTypeValidator({ fileType: /(png|jpg|jpeg|webp)$/ }),
-        ],
-      }),
-    )
-    file?: Express.Multer.File,
-    @Body('imageUrl') imageUrl?: string,
-  ) {
-    return this.userService.updateProfileImage(req.user.id, file, imageUrl);
+  @UseGuards(AuthGuard('jwt'))
+  @Roles(Rol.user)
+  @Put('profile/image')
+  updateProfileImage(@Req() req, @UploadedFile() file: Express.Multer.File) {
+    console.log('FILE ACCEPTED:', file.mimetype);
+    return this.userService.updateProfileImage(req.user.id, file);
+  }
+
+  @Put('profile/image-url')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Update profile image by URL' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        imageUrl: {
+          type: 'string',
+          example: 'https://example.com/profile.jpg',
+        },
+      },
+      required: ['imageUrl'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Profile image updated' })
+  @ApiResponse({ status: 400, description: 'Invalid image URL' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  updateProfileImageByUrl(@Req() req, @Body('imageUrl') imageUrl: string) {
+    return this.userService.updateProfileImage(
+      req.user.id,
+      undefined,
+      imageUrl,
+    );
   }
 
   @Put('me/complete-profile')
