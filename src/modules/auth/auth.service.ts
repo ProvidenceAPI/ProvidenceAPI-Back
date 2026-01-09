@@ -51,9 +51,9 @@ export class AuthService {
       age--;
     }
 
-    if (age < 18) {
+    if (age < 16) {
       throw new BadRequestException(
-        'You must be at least 18 years old to register',
+        'You must be at least 16 years old to register',
       );
     }
   }
