@@ -5,6 +5,7 @@ import typeorm from './config/typeorm';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from './modules/users/users.module';
+import { ActivitiesModule } from './modules/activities/activities.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { UserModule } from './modules/users/users.module';
     }),
     AuthModule,
     UserModule,
+    ActivitiesModule,
   ],
   controllers: [],
   providers: [],
