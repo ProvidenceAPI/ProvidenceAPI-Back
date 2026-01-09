@@ -2,11 +2,8 @@ import {
   BadRequestException,
   Body,
   Controller,
-  FileTypeValidator,
   Get,
-  MaxFileSizeValidator,
   Param,
-  ParseFilePipe,
   ParseUUIDPipe,
   Put,
   Req,
@@ -40,7 +37,7 @@ import { CompleteGoogleProfileDto } from './dtos/complete-google.dto';
 export class UsersController {
   constructor(private readonly userService: UsersService) {}
 
-  @Get('me')
+  @Get('profile')
   @ApiOperation({ summary: 'Get my profile' })
   @ApiResponse({ status: 200, description: 'User profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -48,7 +45,7 @@ export class UsersController {
     return this.userService.getMyProfile(req.user.id);
   }
 
-  @Put('me')
+  @Put('profile')
   @ApiOperation({ summary: 'Update my profile' })
   @ApiResponse({ status: 200, description: 'Updated profile' })
   @ApiResponse({ status: 400, description: 'Validation error' })
@@ -119,7 +116,7 @@ export class UsersController {
     );
   }
 
-  @Put('me/complete-profile')
+  @Put('profile/complete-profile')
   @UseGuards(AuthGuard('jwt'))
   completeProfile(@Req() req, @Body() dto: CompleteGoogleProfileDto) {
     return this.userService.completeGoogleProfile(req.user.id, dto);
