@@ -82,6 +82,28 @@ export class AuthController {
     }
   }
 
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  googleAuth() {}
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthCallback(@Req() req, @Res() res: Response) {
+    try {
+      // Intenta hacer login si el usuario existe
+      const result = await this.authService.googleLogin(req.user);
+      res.redirect(
+        `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}`,
+      );
+    } catch (error) {
+      // Si no existe, lo registra
+      const token = await this.authService.googleSignup(req.user);
+      res.redirect(
+        `${process.env.FRONTEND_URL}/oauth?token=${token.access_token}`,
+      );
+    }
+  }
+
   @Get('google/login')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Login with Google' })

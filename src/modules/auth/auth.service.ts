@@ -85,10 +85,11 @@ export class AuthService {
 
       const savedUser = await this.usersRepository.save(newUser);
 
-      const { password, ...userWithOutPassword } = savedUser;
+      const { password, status, rol, provider, ...userResponse } = savedUser;
+
       return {
         message: 'User create successfully',
-        user: userWithOutPassword,
+        user: userResponse,
       };
     } catch (error) {
       throw new InternalServerErrorException('Error creating the user');
