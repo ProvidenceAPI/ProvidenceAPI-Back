@@ -117,4 +117,13 @@ export class ReservationsService {
     }
     await this.reservationRepo.save(activeReservations);
   }
+
+  async findById(id: string) {
+    const reservation = await this.reservationRepo.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+    if (!reservation) throw new NotFoundException('Reservation not found');
+    return reservation;
+  }
 }
