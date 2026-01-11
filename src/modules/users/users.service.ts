@@ -20,6 +20,9 @@ import { CompleteGoogleProfileDto } from './dtos/complete-google.dto';
 
 @Injectable()
 export class UsersService {
+  findById(id: any) {
+    throw new Error('Method not implemented.');
+  }
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     private readonly fileUploadService: FileUploadService,

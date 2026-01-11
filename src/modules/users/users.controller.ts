@@ -32,12 +32,12 @@ import { CompleteGoogleProfileDto } from './dtos/complete-google.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'), RolesGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly userService: UsersService) {}
 
   @Get('profile')
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Get my profile' })
   @ApiResponse({ status: 200, description: 'User profile' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -46,6 +46,7 @@ export class UsersController {
   }
 
   @Put('profile')
+  @UseGuards(AuthGuard('jwt'))
   @ApiOperation({ summary: 'Update my profile' })
   @ApiResponse({ status: 200, description: 'Updated profile' })
   @ApiResponse({ status: 400, description: 'Validation error' })
@@ -54,6 +55,8 @@ export class UsersController {
     return this.userService.updateMyProfile(req.user.id, dto);
   }
 
+  @Put('profile/image')
+  @UseGuards(AuthGuard('jwt'))
   @UseInterceptors(
     FileInterceptor('file', {
       fileFilter: (req, file, cb) => {
@@ -82,11 +85,8 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'Profile image updated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @UseGuards(AuthGuard('jwt'))
-  @Roles(Rol.user)
-  @Put('profile/image')
   updateProfileImage(@Req() req, @UploadedFile() file: Express.Multer.File) {
-    console.log('FILE ACCEPTED:', file.mimetype);
+    console.log('FILE ACCEPTED:', file?.mimetype);
     return this.userService.updateProfileImage(req.user.id, file);
   }
 
@@ -123,6 +123,7 @@ export class UsersController {
   }
 
   @Get()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Rol.admin, Rol.superAdmin)
   @ApiOperation({ summary: 'Get all users (Admin)' })
   @ApiResponse({ status: 200, description: 'User list' })
@@ -133,6 +134,7 @@ export class UsersController {
   }
 
   @Get(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Rol.admin, Rol.superAdmin)
   @ApiOperation({ summary: 'Get user by ID (Admin)' })
   @ApiResponse({ status: 200, description: 'User found' })
@@ -144,6 +146,7 @@ export class UsersController {
   }
 
   @Put(':id')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Rol.superAdmin)
   @ApiOperation({ summary: 'Update user profile by ID (SuperAdmin)' })
   @ApiResponse({ status: 200, description: 'Updated profile' })
@@ -157,6 +160,7 @@ export class UsersController {
   }
 
   @Put(':id/status')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Rol.superAdmin)
   @ApiOperation({ summary: 'Update user status (SuperAdmin)' })
   @ApiResponse({ status: 200, description: 'Updated status' })
