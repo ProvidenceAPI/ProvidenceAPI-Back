@@ -6,6 +6,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from './modules/users/users.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { ReservationsModule } from './modules/reservations/reservations.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { ActivitiesModule } from './modules/activities/activities.module';
     AuthModule,
     UserModule,
     ActivitiesModule,
+    ReservationsModule,
+    PaymentsModule,
   ],
   controllers: [],
   providers: [],
