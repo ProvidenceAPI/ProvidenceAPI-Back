@@ -40,8 +40,8 @@ export class User {
     writeOnly: true,
     example: '********',
   })
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  password: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  password: string | null;
 
   @ApiProperty({ example: '1998-05-10' })
   @Column({ type: 'date' })
