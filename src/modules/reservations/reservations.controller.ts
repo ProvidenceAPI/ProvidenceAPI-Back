@@ -15,10 +15,6 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
-  ApiBadRequestResponse,
-  ApiUnauthorizedResponse,
-  ApiForbiddenResponse,
-  ApiNotFoundResponse,
 } from '@nestjs/swagger';
 import { Roles } from 'src/common/decorators/roles.decorators';
 import { Rol } from 'src/common/enum/roles.enum';
