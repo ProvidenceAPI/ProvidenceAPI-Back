@@ -9,15 +9,25 @@ import {
   Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { SignupDto } from './dtos/singup.dto';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response } from 'express';
+import { UsersService } from 'src/modules/users/users.service';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post('signup')
   @HttpCode(201)
@@ -56,107 +66,6 @@ export class AuthController {
     return this.authService.signin(req.user);
   }
 
-  @Get('google/signup')
-  @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: 'Login with Google' })
-  @ApiResponse({ status: 200, description: 'Redirects to Google OAuth' })
-  async googleSignup() {}
-
-  @Get('google/signup/callback')
-  @UseGuards(AuthGuard('google'))
-  @ApiOperation({ summary: 'Google OAuth callback' })
-  @ApiResponse({
-    status: 302,
-    description: 'Redirects to frontend with token',
-  })
-  async googleSignupCallback(@Req() req, @Res() res: Response) {
-    try {
-      const result = await this.authService.googleSignup(req.user);
-
-      // Usar datos de req.user (vienen de Google Strategy)
-      const googleUser: any = req.user; // Cast a any para evitar errores de tipo
-      const userData = {
-        id: 'google-user',
-        name:
-          googleUser.firstName +
-          (googleUser.lastName ? ' ' + googleUser.lastName : ''),
-        email: googleUser.email,
-        profileImage: googleUser.picture || null,
-        phone: null,
-      };
-
-      const userEncoded = Buffer.from(JSON.stringify(userData)).toString(
-        'base64',
-      );
-
-      res.redirect(
-        `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}&user=${userEncoded}`,
-      );
-    } catch (err) {
-      res.status(500).send({ success: false, message: err.message });
-    }
-  }
-
-  @Get('google')
-  @UseGuards(AuthGuard('google'))
-  googleAuth() {}
-
-  @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  async googleAuthCallback(@Req() req, @Res() res: Response) {
-    try {
-      // Intenta login
-      const result = await this.authService.googleLogin(req.user);
-
-      // Usar datos de req.user (vienen de Google Strategy)
-      const googleUser: any = req.user; // Cast a any para evitar errores de tipo
-      const userData = {
-        id: 'google-user',
-        name:
-          googleUser.firstName +
-          (googleUser.lastName ? ' ' + googleUser.lastName : ''),
-        email: googleUser.email,
-        profileImage: googleUser.picture || null,
-        phone: null,
-      };
-
-      const userEncoded = Buffer.from(JSON.stringify(userData)).toString(
-        'base64',
-      );
-
-      res.redirect(
-        `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}&user=${userEncoded}`,
-      );
-    } catch (error) {
-      // Si falla login, intenta signup
-      try {
-        const token = await this.authService.googleSignup(req.user);
-
-        // Usar datos de req.user (vienen de Google Strategy)
-        const googleUser: any = req.user; // Cast a any para evitar errores de tipo
-        const userData = {
-          id: 'google-user',
-          name:
-            googleUser.firstName +
-            (googleUser.lastName ? ' ' + googleUser.lastName : ''),
-          email: googleUser.email,
-          profileImage: googleUser.picture || null,
-          phone: null,
-        };
-
-        const userEncoded = Buffer.from(JSON.stringify(userData)).toString(
-          'base64',
-        );
-
-        res.redirect(
-          `${process.env.FRONTEND_URL}/oauth?token=${token.access_token}&user=${userEncoded}`,
-        );
-      } catch (err) {
-        res.status(500).send({ success: false, message: err.message });
-      }
-    }
-  }
-
   @Get('google/login')
   @UseGuards(AuthGuard('google'))
   @ApiOperation({ summary: 'Login with Google' })
@@ -165,30 +74,22 @@ export class AuthController {
   @Get('google/login/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginCallback(@Req() req, @Res() res: Response) {
-    try {
-      const result = await this.authService.googleLogin(req.user);
+    const result = await this.authService.googleLogin(req.user);
 
-      // Usar datos de req.user (vienen de Google Strategy)
-      const googleUser: any = req.user; // Cast a any para evitar errores de tipo
-      const userData = {
-        id: 'google-user',
-        name:
-          googleUser.firstName +
-          (googleUser.lastName ? ' ' + googleUser.lastName : ''),
-        email: googleUser.email,
-        profileImage: googleUser.picture || null,
-        phone: null,
-      };
+    res.redirect(
+      `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}`,
+    );
+  }
 
-      const userEncoded = Buffer.from(JSON.stringify(userData)).toString(
-        'base64',
-      );
-
-      res.redirect(
-        `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}&user=${userEncoded}`,
-      );
-    } catch (err) {
-      res.status(500).send({ success: false, message: err.message });
-    }
+  @Get('me')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getMe(@Req() req) {
+    console.log('👤 Usuario autenticado:', req.user);
+    const user = await this.usersService.getUserById(req.user.id);
+    return user;
   }
 }

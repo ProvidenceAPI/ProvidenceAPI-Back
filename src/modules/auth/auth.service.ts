@@ -29,9 +29,14 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) return null;
+    if (!user.password)
+      throw new UnauthorizedException(
+        'This account was created with Google. Please sign in with Google.',
+      );
+    if (user.provider === AuthProvider.GOOGLE)
+      throw new UnauthorizedException('This account uses Google login');
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-
     if (!isPasswordValid) return null;
 
     const { password: _, ...result } = user;
@@ -123,71 +128,28 @@ export class AuthService {
     };
   }
 
-  async validateGoogleUser(googleUser: any) {
+  async googleLogin(googleUser: any) {
     const { email, firstName, lastName, picture } = googleUser;
-
-    let user = await this.usersRepository.findOne({
-      where: { email },
-    });
-
+    let user = await this.usersRepository.findOne({ where: { email } });
     if (!user) {
       user = this.usersRepository.create({
         email,
         name: firstName,
-        lastname: lastName,
-        password: 'GOOGLE_AUTH',
+        lastname: lastName || 'GOOGLE',
+        profileImage: picture,
+        provider: AuthProvider.GOOGLE,
+        status: UserStatus.active,
+        rol: Rol.user,
+        password: null,
         birthdate: new Date('2000-01-01'),
         phone: '0000000000',
         dni: Math.floor(Math.random() * 1000000000),
         genre: Genre.other,
-        profileImage: picture || null,
       });
-
       await this.usersRepository.save(user);
     }
-
-    return user;
-  }
-
-  async googleSignup(googleUser: any) {
-    const validatedUser = await this.validateGoogleUser(googleUser);
-    if (validatedUser.status === UserStatus.banned) {
-      throw new UnauthorizedException(
-        'Your account has been banned. Contact the administrator',
-      );
-    }
-    if (validatedUser.status === UserStatus.cancelled) {
-      throw new UnauthorizedException('Your account has been cancelled');
-    }
-    const payload = {
-      id: validatedUser.id,
-      email: validatedUser.email,
-      rol: validatedUser.rol,
-    };
-    const token = this.jwtService.sign(payload);
-    return {
-      message: 'Login successful',
-      access_token: token,
-    };
-  }
-
-  async googleLogin(googleUser: any) {
-    const { email } = googleUser;
-    const user = await this.usersRepository.findOne({
-      where: { email },
-    });
-    if (!user) {
-      throw new UnauthorizedException(
-        'No account found. Please sign up with Google first.',
-      );
-    }
-    if (user.provider !== AuthProvider.GOOGLE) {
-      throw new UnauthorizedException(
-        'This email was registered with password login',
-      );
-    }
-    if (user.status !== UserStatus.active) {
-      throw new UnauthorizedException('User is not active');
+    if (user.status === UserStatus.banned) {
+      throw new UnauthorizedException('Account banned');
     }
 
     const payload = {
@@ -195,6 +157,7 @@ export class AuthService {
       email: user.email,
       rol: user.rol,
     };
+
     return {
       access_token: this.jwtService.sign(payload),
     };
