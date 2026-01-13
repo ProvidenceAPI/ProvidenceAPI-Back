@@ -61,8 +61,12 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port, '0.0.0.0');
 
-  console.log(`🚀 Application is running on: http://localhost:${port}`);
-  console.log(`📚 Swagger documentation: http://localhost:${port}/api/docs`);
+  console.log(
+    `🚀 Application is running on: https://providenceapi-back.onrender.com:${port}`,
+  );
+  console.log(
+    `📚 Swagger documentation: https://providenceapi-back.onrender.com:${port}/api/docs`,
+  );
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 }
 bootstrap();
