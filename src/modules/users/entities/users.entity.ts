@@ -16,7 +16,6 @@ export class User {
   })
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
   @ApiProperty({ example: 'Valentina' })
   @Column({ type: 'varchar', length: 50, nullable: false })
   name: string;
