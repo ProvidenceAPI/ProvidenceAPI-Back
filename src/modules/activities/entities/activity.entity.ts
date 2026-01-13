@@ -1,9 +1,11 @@
+import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 export enum ActivityStatus {
@@ -60,4 +62,7 @@ export class Activity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @OneToMany(() => Reservation, (reservation) => reservation.activity)
+  reservations: Reservation[];
 }

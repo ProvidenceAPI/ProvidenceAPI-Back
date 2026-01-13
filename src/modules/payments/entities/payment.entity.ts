@@ -4,6 +4,7 @@ import {
   Column,
   ManyToOne,
   CreateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { User } from 'src/modules/users/entities/users.entity';
 import { PaymentStatus } from 'src/common/enum/paymentStatus.enum';
@@ -55,6 +56,7 @@ export class Payment {
 
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, { eager: true })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @ApiProperty({ type: () => Reservation })

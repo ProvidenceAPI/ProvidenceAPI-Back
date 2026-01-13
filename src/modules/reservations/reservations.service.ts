@@ -13,6 +13,7 @@ import { CreateReservationDto } from './dtos/reservation.dto';
 import { Rol } from 'src/common/enum/roles.enum';
 import { ReservationStatus } from 'src/common/enum/reservations.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
+import { Activity } from '../activities/entities/activity.entity';
 import { TurnsService } from '../turns/turns.service';
 import { TurnStatus } from '../turns/entities/turn.entity';
 // import { MailService } from '../mail/mail.service'; // ✅ Descomentar cuando implementes Nodemailer
@@ -24,6 +25,8 @@ export class ReservationsService {
     private readonly reservationRepo: Repository<Reservation>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Activity)
+    private readonly activityRepository: Repository<Activity>,
     private readonly turnsService: TurnsService,
     // private readonly mailService: MailService, // Descomentar cuando implementes Nodemailer
   ) {}

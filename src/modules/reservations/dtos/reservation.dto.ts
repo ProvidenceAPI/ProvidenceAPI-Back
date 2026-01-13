@@ -2,6 +2,13 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsUUID, Matches } from 'class-validator';
 
 export class CreateReservationDto {
+  @ApiProperty({
+    example: 'b1a2c3d4-e5f6-7890-abcd-123456789abc',
+    description: 'ID de la actividad a reservar',
+  })
+  @IsUUID()
+  activityId: string;
+
   @IsDateString()
   activityDate: string;
 
