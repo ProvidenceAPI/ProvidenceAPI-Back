@@ -13,6 +13,7 @@ import { CreateReservationDto } from './dtos/reservation.dto';
 import { Rol } from 'src/common/enum/roles.enum';
 import { ReservationStatus } from 'src/common/enum/reservations.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
+import { Activity } from '../activities/entities/activity.entity';
 
 @Injectable()
 export class ReservationsService {
@@ -21,6 +22,8 @@ export class ReservationsService {
     private readonly reservationRepo: Repository<Reservation>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Activity)
+    private readonly activityRepository: Repository<Activity>,
   ) {}
 
   async createReservation(userId: string, dto: CreateReservationDto) {

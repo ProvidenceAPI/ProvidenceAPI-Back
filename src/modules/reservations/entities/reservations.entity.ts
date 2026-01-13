@@ -5,12 +5,14 @@ import {
   ManyToOne,
   CreateDateColumn,
   OneToMany,
+  JoinColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/users.entity';
 import { ReservationStatus } from 'src/common/enum/reservations.enum';
 import { PaymentStatus } from 'src/common/enum/paymentStatus.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { Payment } from 'src/modules/payments/entities/payment.entity';
+import { Activity } from 'src/modules/activities/entities/activity.entity';
 
 @Entity('reservations')
 export class Reservation {
@@ -58,6 +60,14 @@ export class Reservation {
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, (user) => user.reservations, { eager: true })
   user: User;
+
+  @ApiProperty({ type: () => Activity })
+  @ManyToOne(() => Activity, (activity) => activity.reservations, {
+    eager: true,
+    nullable: false,
+  })
+  @JoinColumn({ name: 'activityId' })
+  activity: Activity;
 
   @ApiProperty({ type: () => Payment, isArray: true })
   @OneToMany(() => Payment, (payment) => payment.reservation)
