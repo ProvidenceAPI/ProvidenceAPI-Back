@@ -9,7 +9,7 @@ export class CreatePaymentDto {
   })
   @IsOptional()
   @IsUUID()
-  reservationId?: string;
+  reservationId: string;
 
   @ApiProperty({
     example: 'a2b3c4d5-e6f7-8901-bcde-234567890def',
@@ -19,4 +19,8 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsUUID()
   activityId?: string;
+
+  @IsNumber()
+  @IsPositive()
+  amount: number;
 }
