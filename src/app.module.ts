@@ -8,6 +8,8 @@ import { UserModule } from './modules/users/users.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
+import { TurnsModule } from './modules/turns/turns.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -29,9 +31,11 @@ import { ReservationsModule } from './modules/reservations/reservations.module';
         },
       }),
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UserModule,
     ActivitiesModule,
+    TurnsModule,
     ReservationsModule,
     PaymentsModule,
   ],

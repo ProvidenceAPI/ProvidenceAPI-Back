@@ -8,6 +8,7 @@ import {
   Param,
   ParseUUIDPipe,
   Get,
+  Patch,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
@@ -15,6 +16,7 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
+  ApiBody,
 } from '@nestjs/swagger';
 import { Roles } from 'src/common/decorators/roles.decorators';
 import { Rol } from 'src/common/enum/roles.enum';
@@ -65,6 +67,38 @@ export class ReservationsController {
   @ApiResponse({ status: 404, description: 'Reservation not found' })
   cancel(@Req() req, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.cancelReservation(id, req.user);
+  }
+
+  @Patch('turn/:turnId/cancel')
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({
+    summary: 'Cancel a turn and notify all users with reservations (Admin)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          example: 'Instructor unavailable',
+          description: 'Reason for cancellation (optional)',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Turn cancelled and users notified',
+  })
+  @ApiResponse({ status: 400, description: 'Turn already cancelled' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  @ApiResponse({ status: 404, description: 'Turn not found' })
+  cancelTurn(
+    @Param('turnId', ParseUUIDPipe) turnId: string,
+    @Body('reason') reason?: string,
+  ) {
+    return this.service.cancelTurnAndNotifyUsers(turnId, reason);
   }
 
   @Get()
