@@ -9,7 +9,6 @@ dotenvConfig({
 });
 
 export default registerAs('typeorm', () => {
-  // Si existe DATABASE_URL (Railway), úsala
   if (process.env.DATABASE_URL) {
     return {
       type: 'postgres',
