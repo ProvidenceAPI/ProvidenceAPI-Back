@@ -10,6 +10,9 @@ import {
   ParseUUIDPipe,
   UseGuards,
   Patch,
+  BadRequestException,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +20,8 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dtos/create-activity.dto';
@@ -26,6 +31,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorators';
 import { Rol } from 'src/common/enum/roles.enum';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Activities')
 @Controller('activities')
@@ -84,6 +90,85 @@ export class ActivitiesController {
     @Body() updateActivityDto: UpdateActivityDto,
   ) {
     return this.activitiesService.update(id, updateActivityDto);
+  }
+
+  @Put(':id/image')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/^image\/(png|jpg|jpeg|webp)$/)) {
+          return cb(
+            new BadRequestException('Only image files are allowed'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 2_000_000, // 2MB
+      },
+    }),
+  )
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload activity image to Cloudinary (Admin only)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Image uploaded successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid file type or size' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  @ApiResponse({ status: 404, description: 'Activity not found' })
+  uploadActivityImage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+    return this.activitiesService.updateActivityImage(id, file);
+  }
+
+  @Put(':id/image-url')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Update activity image by URL (Admin only)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        imageUrl: {
+          type: 'string',
+          example: 'https://example.com/activity.jpg',
+        },
+      },
+      required: ['imageUrl'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Image URL updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid image URL' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  @ApiResponse({ status: 404, description: 'Activity not found' })
+  updateActivityImageByUrl(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('imageUrl') imageUrl: string,
+  ) {
+    if (!imageUrl) {
+      throw new BadRequestException('imageUrl is required');
+    }
+    return this.activitiesService.updateActivityImage(id, undefined, imageUrl);
   }
 
   @Patch(':id/toggle-status')

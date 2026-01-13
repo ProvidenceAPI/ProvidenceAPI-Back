@@ -10,12 +10,14 @@ import { Activity, ActivityStatus } from './entities/activity.entity';
 import { CreateActivityDto } from './dtos/create-activity.dto';
 import { UpdateActivityDto } from './dtos/update-activity.dto';
 import { FilterActivityDto } from './dtos/filter-activity.dto';
+import { FileUploadService } from '../file-upload/file-upload.service';
 
 @Injectable()
 export class ActivitiesService {
   constructor(
     @InjectRepository(Activity)
     private readonly activityRepository: Repository<Activity>,
+    private readonly fileUploadService: FileUploadService,
   ) {}
 
   async create(createActivityDto: CreateActivityDto): Promise<Activity> {
@@ -149,6 +151,38 @@ export class ActivitiesService {
       )
         throw error;
       throw new InternalServerErrorException('Error updating activity');
+    }
+  }
+
+  async updateActivityImage(
+    activityId: string,
+    file?: Express.Multer.File,
+    imageUrl?: string,
+  ): Promise<Activity> {
+    try {
+      const activity = await this.findOne(activityId);
+
+      let finalUrl: string;
+
+      if (file) {
+        finalUrl = await this.fileUploadService.uploadImage(file, 'activities');
+      } else if (imageUrl) {
+        finalUrl = imageUrl;
+      } else {
+        throw new BadRequestException(
+          'Either file or imageUrl must be provided',
+        );
+      }
+
+      activity.image = finalUrl;
+      return await this.activityRepository.save(activity);
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
+      throw new InternalServerErrorException('Error updating activity image');
     }
   }
 
