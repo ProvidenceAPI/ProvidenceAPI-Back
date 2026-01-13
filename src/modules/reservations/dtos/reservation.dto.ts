@@ -21,4 +21,11 @@ export class CreateReservationDto {
     message: 'endTime must be HH:mm or HH:mm:ss',
   })
   endTime: string;
+
+  @ApiProperty({
+    example: 'a1b2c3d4-e5f6-7890-abcd-123456789abc',
+    description: 'ID of the turn to reserve',
+  })
+  @IsUUID()
+  turnId: string;
 }

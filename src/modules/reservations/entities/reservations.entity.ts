@@ -12,6 +12,7 @@ import { ReservationStatus } from 'src/common/enum/reservations.enum';
 import { PaymentStatus } from 'src/common/enum/paymentStatus.enum';
 import { ApiProperty } from '@nestjs/swagger';
 import { Payment } from 'src/modules/payments/entities/payment.entity';
+import { Turn } from 'src/modules/turns/entities/turn.entity';
 import { Activity } from 'src/modules/activities/entities/activity.entity';
 
 @Entity('reservations')
@@ -61,13 +62,31 @@ export class Reservation {
   @ManyToOne(() => User, (user) => user.reservations, { eager: true })
   user: User;
 
-  @ApiProperty({ type: () => Activity })
-  @ManyToOne(() => Activity, (activity) => activity.reservations, {
-    eager: true,
-    nullable: false,
+  @Column({ type: 'uuid' })
+  userId: string;
+
+  // ✅ Relación con Turn
+  @ApiProperty({
+    type: () => Turn,
+    description: 'Turn associated with this reservation',
   })
+  @ManyToOne(() => Turn, (turn) => turn.reservations, { eager: true })
+  @JoinColumn({ name: 'turnId' })
+  turn: Turn;
+
+  @Column({ type: 'uuid' })
+  turnId: string;
+
+  @ApiProperty({
+    type: () => Activity,
+    description: 'Activity associated with this reservation (direct reference)',
+  })
+  @ManyToOne(() => Activity, { eager: true })
   @JoinColumn({ name: 'activityId' })
   activity: Activity;
+
+  @Column({ type: 'uuid' })
+  activityId: string;
 
   @ApiProperty({ type: () => Payment, isArray: true })
   @OneToMany(() => Payment, (payment) => payment.reservation)
