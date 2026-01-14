@@ -77,7 +77,7 @@ export class AuthController {
     const result = await this.authService.googleLogin(req.user);
 
     res.redirect(
-      `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}`,
+      `${process.env.FRONTEND_URL}/auth/callback?token=${result.access_token}`,
     );
   }
 
