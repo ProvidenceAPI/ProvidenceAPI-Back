@@ -6,10 +6,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from './modules/users/users.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
-import { PaymentsModule } from './modules/payments/payments.module';
-import { ReservationsModule } from './modules/reservations/reservations.module';
 import { TurnsModule } from './modules/turns/turns.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ReservationsModule } from './modules/reservations/reservations.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 
 @Module({
   imports: [
@@ -32,12 +34,14 @@ import { ScheduleModule } from '@nestjs/schedule';
       }),
     }),
     ScheduleModule.forRoot(),
+    MercadoPagoModule,
     AuthModule,
     UserModule,
     ActivitiesModule,
     TurnsModule,
     ReservationsModule,
     PaymentsModule,
+    SubscriptionsModule,
   ],
   controllers: [],
   providers: [],
