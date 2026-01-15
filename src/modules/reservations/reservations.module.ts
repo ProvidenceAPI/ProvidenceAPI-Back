@@ -6,11 +6,13 @@ import { ReservationsController } from './reservations.controller';
 import { ReservationsService } from './reservations.service';
 import { Activity } from '../activities/entities/activity.entity';
 import { TurnsModule } from '../turns/turns.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Reservation, User, Activity]),
     TurnsModule,
+    SubscriptionsModule,
   ],
   controllers: [ReservationsController],
   providers: [ReservationsService],

@@ -16,6 +16,7 @@ import { UserStatus } from 'src/common/enum/userStatus.enum';
 import { Activity } from '../activities/entities/activity.entity';
 import { TurnsService } from '../turns/turns.service';
 import { TurnStatus } from '../turns/entities/turn.entity';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 // import { MailService } from '../mail/mail.service'; // ✅ Descomentar cuando implementes Nodemailer
 
 @Injectable()
@@ -28,45 +29,53 @@ export class ReservationsService {
     @InjectRepository(Activity)
     private readonly activityRepository: Repository<Activity>,
     private readonly turnsService: TurnsService,
+    private readonly subscriptionsService: SubscriptionsService,
     // private readonly mailService: MailService, // Descomentar cuando implementes Nodemailer
   ) {}
 
   async createReservation(userId: string, dto: CreateReservationDto) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
-
-    if (user.status === UserStatus.banned) {
+    if (user.status === UserStatus.banned)
       throw new ForbiddenException('Your account is banned');
-    }
-
-    if (user.status === UserStatus.cancelled) {
+    if (user.status === UserStatus.cancelled)
       throw new ForbiddenException('Your account is cancelled');
-    }
 
     const turn = await this.turnsService.findOne(dto.turnId);
-
-    if (turn.status === TurnStatus.cancelled) {
+    if (turn.status === TurnStatus.cancelled)
       throw new BadRequestException('This turn has been cancelled');
-    }
-
-    if (turn.status === TurnStatus.completed) {
+    if (turn.status === TurnStatus.completed)
       throw new BadRequestException('This turn has already occurred');
-    }
-
-    if (turn.availableSpots <= 0) {
+    if (turn.availableSpots <= 0)
       throw new BadRequestException('No available spots for this turn');
-    }
 
+    const hasActiveSubscription =
+      await this.subscriptionsService.checkSubscriptionStatus(
+        userId,
+        turn.activityId,
+      );
+    if (!hasActiveSubscription) {
+      if (turn.isFreeTrial && turn.activity.hasFreeTrial) {
+        const hasUsedFreeTrial =
+          await this.subscriptionsService.hasUsedFreeTrial(userId);
+        if (hasUsedFreeTrial)
+          throw new ForbiddenException(
+            'You have already used your free trial. Subscribe to continue booking classes.',
+          );
+      } else {
+        throw new ForbiddenException(
+          'You need an active subscription to book this activity. Please subscribe first.',
+        );
+      }
+    }
     const now = new Date();
     const turnDate =
       turn.date instanceof Date
         ? turn.date.toISOString().split('T')[0]
         : turn.date;
     const turnDateTime = new Date(`${turnDate}T${turn.startTime}`);
-
-    if (turnDateTime < now) {
+    if (turnDateTime < now)
       throw new BadRequestException('Cannot reserve past turns');
-    }
 
     const existingReservation = await this.reservationRepo.findOne({
       where: {
@@ -75,12 +84,10 @@ export class ReservationsService {
         status: ReservationStatus.confirmed,
       },
     });
-
-    if (existingReservation) {
+    if (existingReservation)
       throw new ConflictException(
         'You already have a reservation for this turn',
       );
-    }
 
     const reservation = this.reservationRepo.create({
       activityDate: turn.date,
@@ -89,17 +96,27 @@ export class ReservationsService {
       userId: user.id,
       turnId: dto.turnId,
       activityId: turn.activityId,
+      user,
+      turn,
+      activity: turn.activity,
     });
-
-    reservation.user = user;
-    reservation.turn = turn;
-    reservation.activity = turn.activity;
 
     const savedReservation = await this.reservationRepo.save(reservation);
 
     await this.turnsService.decrementAvailableSpots(dto.turnId);
 
-    // ✅ TODO: Enviar email de confirmación
+    if (turn.isFreeTrial && !hasActiveSubscription) {
+      await this.subscriptionsService.markFreeTrialAsUsed(
+        userId,
+        turn.activityId,
+      );
+
+      console.log(
+        `✅ User ${userId} used their free trial on activity ${turn.activityId}`,
+      );
+    }
+
+    // TODO: Enviar email de confirmación
     // await this.mailService.sendReservationConfirmation(user, savedReservation);
 
     return savedReservation;
