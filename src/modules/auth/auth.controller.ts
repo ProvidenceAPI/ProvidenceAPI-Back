@@ -77,7 +77,7 @@ export class AuthController {
     const result = await this.authService.googleLogin(req.user);
 
     res.redirect(
-      `${process.env.FRONTEND_URL}/auth/callback?token=${result.access_token}`,
+      `${process.env.FRONTEND_URL}/oauth?token=${result.access_token}`,
     );
   }
 
@@ -88,7 +88,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMe(@Req() req) {
-    console.log('👤 Usuario autenticado:', req.user);
+    console.log('ðŸ‘¤ Usuario autenticado:', req.user);
     const user = await this.usersService.getUserById(req.user.id);
     return user;
   }
