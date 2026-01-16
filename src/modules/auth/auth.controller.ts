@@ -51,11 +51,11 @@ export class AuthController {
       properties: {
         email: {
           type: 'string',
-          example: 'user@email.com',
+          example: 'sofia.canon@gmail.com',
         },
         password: {
           type: 'string',
-          example: 'Password123*',
+          example: 'Contraseña123*',
         },
       },
       required: ['email', 'password'],
