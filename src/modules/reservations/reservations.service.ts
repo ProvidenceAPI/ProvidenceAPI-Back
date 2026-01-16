@@ -17,7 +17,8 @@ import { Activity } from '../activities/entities/activity.entity';
 import { TurnsService } from '../turns/turns.service';
 import { TurnStatus } from '../turns/entities/turn.entity';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
-// import { MailService } from '../mail/mail.service'; // ✅ Descomentar cuando implementes Nodemailer
+import { MailService } from '../mail/mail.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ReservationsService {
@@ -30,7 +31,8 @@ export class ReservationsService {
     private readonly activityRepository: Repository<Activity>,
     private readonly turnsService: TurnsService,
     private readonly subscriptionsService: SubscriptionsService,
-    // private readonly mailService: MailService, // Descomentar cuando implementes Nodemailer
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService,
   ) {}
 
   async createReservation(userId: string, dto: CreateReservationDto) {
@@ -116,8 +118,22 @@ export class ReservationsService {
       );
     }
 
-    // TODO: Enviar email de confirmación
-    // await this.mailService.sendReservationConfirmation(user, savedReservation);
+    try {
+      await this.mailService.sendReservationConfirmation(user.email, {
+        userName: user.name,
+        activityName: turn.activity.name,
+        turnDate: turn.date.toLocaleDateString('es-ES'),
+        turnTime: turn.startTime,
+        endTime: turn.endTime,
+        instructor: 'Por asignar',
+        location: 'Provincia de Buenos Aires 760',
+        frontendUrl:
+          this.configService.get<string>('FRONTEND_URL') ||
+          'http://localhost:3001',
+      });
+    } catch (error) {
+      console.error('Error sending reservation confirmation email:', error);
+    }
 
     return savedReservation;
   }
@@ -128,7 +144,7 @@ export class ReservationsService {
   ) {
     const reservation = await this.reservationRepo.findOne({
       where: { id: reservationId },
-      relations: ['user', 'turn'],
+      relations: ['user', 'turn', 'turn.activity'],
     });
 
     if (!reservation) throw new NotFoundException('Reservation not found');
@@ -167,19 +183,40 @@ export class ReservationsService {
     }
 
     reservation.status = ReservationStatus.cancelled;
-    const cancelledReservation = await this.reservationRepo.save(reservation);
+    await this.reservationRepo.save(reservation);
 
     if (reservation.turnId) {
       await this.turnsService.incrementAvailableSpots(reservation.turnId);
     }
 
-    // ✅ TODO: Enviar email de cancelación
-    // await this.mailService.sendReservationCancellation(
-    //   reservation.user,
-    //   cancelledReservation,
-    // );
+    try {
+      await this.mailService.sendReservationCancellation(
+        reservation.user.email,
+        {
+          userName: reservation.user.name,
+          activityName: reservation.turn.activity.name,
+          turnDate: reservation.activityDate.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          turnTime: reservation.startTime,
+          reason: isAdmin
+            ? 'Cancelado por el administrador'
+            : 'Cancelado por el usuario',
+          refundInfo:
+            'Puedes reprogramar tu clase sin costo adicional. Visita tu panel de reservas para elegir un nuevo turno.',
+          frontendUrl:
+            this.configService.get<string>('FRONTEND_URL') ||
+            'http://localhost:3001',
+        },
+      );
+    } catch (error) {
+      console.error('❌ Error sending cancellation email:', error.message);
+    }
 
-    return cancelledReservation;
+    return { message: 'Reservation cancelled successfully' };
   }
 
   async cancelTurnAndNotifyUsers(
@@ -197,26 +234,50 @@ export class ReservationsService {
         turnId: turnId,
         status: ReservationStatus.confirmed,
       },
-      relations: ['user', 'turn'],
+      relations: ['user', 'turn', 'turn.activity'],
     });
 
     for (const reservation of activeReservations) {
       reservation.status = ReservationStatus.cancelled;
-
-      // ✅ TODO: Enviar email de notificación a cada usuario
-      // await this.mailService.sendTurnCancellationNotification(
-      //   reservation.user,
-      //   reservation,
-      //   reason,
-      // );
     }
 
     await this.reservationRepo.save(activeReservations);
 
     await this.turnsService.cancelTurn(turnId);
 
+    let emailsSent = 0;
+    let emailsFailed = 0;
+
+    for (const reservation of activeReservations) {
+      try {
+        await this.mailService.sendTurnCancellationNotification(
+          reservation.user.email,
+          {
+            userName: reservation.user.name,
+            activityName: reservation.turn.activity.name,
+            turnDate: reservation.activityDate.toLocaleDateString('es-ES'),
+            turnTime: reservation.startTime,
+            reason: reason || 'Cancelación administrativa del turno',
+            refundInfo:
+              'Puedes reprogramar tu clase sin costo adicional. Tu suscripción permanece activa y puedes elegir otro turno disponible.',
+          },
+        );
+        emailsSent++;
+      } catch (error) {
+        console.error(
+          `Error sending turn cancellation email to ${reservation.user.email}:`,
+          error,
+        );
+        emailsFailed++;
+      }
+    }
+
+    console.log(
+      `Turn ${turnId} cancelled. Emails sent: ${emailsSent}, failed: ${emailsFailed}`,
+    );
+
     return {
-      message: `Turn cancelled successfully. ${activeReservations.length} users were notified.`,
+      message: `Turn cancelled successfully. ${activeReservations.length} users were notified (${emailsSent} emails sent, ${emailsFailed} failed).`,
       reservationsCancelled: activeReservations.length,
     };
   }
