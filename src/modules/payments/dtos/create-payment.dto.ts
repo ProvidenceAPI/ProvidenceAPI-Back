@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsUUID, IsNumber, IsPositive, IsOptional } from 'class-validator';
+import { IsUUID, IsOptional } from 'class-validator';
 
 export class CreatePaymentDto {
   @ApiProperty({
@@ -9,7 +9,7 @@ export class CreatePaymentDto {
   })
   @IsOptional()
   @IsUUID()
-  reservationId: string;
+  reservationId?: string;
 
   @ApiProperty({
     example: 'a2b3c4d5-e6f7-8901-bcde-234567890def',
@@ -19,8 +19,4 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsUUID()
   activityId?: string;
-
-  @IsNumber()
-  @IsPositive()
-  amount: number;
 }
