@@ -11,6 +11,10 @@ import { CreateActivityDto } from './dtos/create-activity.dto';
 import { UpdateActivityDto } from './dtos/update-activity.dto';
 import { FilterActivityDto } from './dtos/filter-activity.dto';
 import { FileUploadService } from '../file-upload/file-upload.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class ActivitiesService {
@@ -18,6 +22,9 @@ export class ActivitiesService {
     @InjectRepository(Activity)
     private readonly activityRepository: Repository<Activity>,
     private readonly fileUploadService: FileUploadService,
+    private readonly mailService: MailService,
+    private readonly configService: ConfigService,
+    private readonly usersService: UsersService,
   ) {}
 
   async create(createActivityDto: CreateActivityDto): Promise<Activity> {
@@ -33,7 +40,27 @@ export class ActivitiesService {
       }
 
       const newActivity = this.activityRepository.create(createActivityDto);
-      return await this.activityRepository.save(newActivity);
+      const savedActivity = await this.activityRepository.save(newActivity);
+
+      try {
+        const users = await this.usersService.findAllActive();
+
+        for (const user of users) {
+          await this.mailService.sendAdminNotification(user.email, {
+            title: '¡Nueva Actividad Disponible! 🎉',
+            message: `Estamos emocionados de anunciar nuestra nueva actividad: ${savedActivity.name}.\n\n${savedActivity.description}\n\nHorarios: ${savedActivity.schedule.join(', ')}\nPrecio: $${savedActivity.price}`,
+            actionUrl: `${this.configService.get('FRONTEND_URL')}/activities/${savedActivity.id}`,
+            actionText: 'VER ACTIVIDAD',
+          });
+        }
+      } catch (error) {
+        console.error(
+          'Error sending new activity notification:',
+          error.message,
+        );
+      }
+
+      return savedActivity;
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Error creating activity');

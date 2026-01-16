@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>Turno Cancelado - Providence Fitness</title>
+
+    <style type="text/css">
+      @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #ededed;
+        font-family: 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      }
+
+      table {
+        border-collapse: collapse;
+      }
+
+      img {
+        border: 0;
+        outline: none;
+        text-decoration: none;
+        -ms-interpolation-mode: bicubic;
+      }
+
+      * {
+        font-family:
+          'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .es-content-body,
+        .es-header-body,
+        .es-footer-body {
+          width: 100% !important;
+        }
+
+        .es-p30 {
+          padding: 20px !important;
+        }
+
+        .es-text-mobile-size-26 {
+          font-size: 22px !important;
+        }
+
+        .es-text-mobile-size-16 {
+          font-size: 14px !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <table
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      style="background-color: #ededed"
+    >
+      <tr>
+        <td align="center">
+          <table
+            width="600"
+            cellspacing="0"
+            cellpadding="0"
+            style="background-color: #131212"
+          >
+            <tr>
+              <td
+                align="center"
+                style="padding: 30px; background-color: #060505"
+              >
+                <img
+                  src="https://eyekwfc.stripocdn.email/content/guids/CABINET_244a3e1e0a19415b15c4a1f890ecc2695d36fa1f67537bb8fd41784de885a3ed/images/logo_actualzado.png"
+                  alt="Providence Fitness Logo"
+                  width="282"
+                  style="display: block; max-width: 100%; height: auto"
+                />
+              </td>
+            </tr>
+          </table>
+
+          <table
+            width="600"
+            cellspacing="0"
+            cellpadding="0"
+            style="background-color: #131212"
+          >
+            <tr>
+              <td
+                align="center"
+                style="padding: 10px 0 25px 0; background-color: #cc0000"
+              >
+                <p style="margin: 0; font-size: 36px; color: #ffffff">❌</p>
+                <p
+                  style="
+                    margin: 10px 0 0 0;
+                    font-size: 26px;
+                    color: #ffffff;
+                    font-weight: bold;
+                    line-height: 150%;
+                  "
+                >
+                  ¡Turno CANCELADO!
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <table
+            width="600"
+            cellspacing="0"
+            cellpadding="0"
+            style="background-color: #ffffff"
+          >
+            <tr>
+              <td style="padding: 30px 30px 40px 30px">
+                <table width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="left" style="padding: 10px 0 15px 0">
+                      <h1
+                        style="
+                          margin: 0;
+                          color: #090808;
+                          font-size: 28px;
+                          font-weight: bold;
+                        "
+                      >
+                        ¡Hola {{userName}}!
+                      </h1>
+                    </td>
+                  </tr>
+                </table>
+
+                <table width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="left" style="padding: 5px 0 15px 0">
+                      <h1
+                        style="
+                          margin: 0;
+                          color: #090808;
+                          font-size: 16px;
+                          font-weight: normal;
+                          line-height: 1.5;
+                        "
+                      >
+                        Te informamos que tu reserva ha sido cancelada.
+                      </h1>
+                    </td>
+                  </tr>
+                </table>
+
+                <table width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="left" style="padding-bottom: 15px">
+                      <h3
+                        style="
+                          margin: 0 0 15px 0;
+                          font-size: 20px;
+                          color: #090808;
+                          line-height: 2.6;
+                        "
+                      >
+                        📋 <strong>Detalles de la Cancelación</strong>
+                      </h3>
+
+                      <p
+                        style="
+                          margin: 0;
+                          color: #090808;
+                          font-size: 18px;
+                          line-height: 1.8;
+                        "
+                      >
+                        <strong>🏋️ Actividad:</strong> {{activityName}}
+                      </p>
+                      <p
+                        style="
+                          margin: 0;
+                          color: #090808;
+                          font-size: 16px;
+                          line-height: 1.8;
+                        "
+                      >
+                        <strong>📅 Fecha:</strong> {{turnDate}}
+                      </p>
+                      <p
+                        style="
+                          margin: 0;
+                          color: #090808;
+                          font-size: 16px;
+                          line-height: 1.8;
+                        "
+                      >
+                        <strong>🕐 Hora:</strong> {{turnTime}}
+                      </p>
+                      <p
+                        style="
+                          margin: 0;
+                          color: #090808;
+                          font-size: 16px;
+                          line-height: 1.8;
+                        "
+                      >
+                        <strong>📝 Razón:</strong> {{reason}}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <table width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td
+                      align="left"
+                      style="
+                        padding: 15px 0;
+                        background-color: #fefce8;
+                        border-radius: 8px;
+                        padding: 15px;
+                      "
+                    >
+                      <h3
+                        style="
+                          margin: 0 0 10px 0;
+                          font-size: 18px;
+                          color: #090808;
+                        "
+                      >
+                        💰 Información de Reembolso
+                      </h3>
+                      <p
+                        style="
+                          margin: 0;
+                          color: #090808;
+                          font-size: 16px;
+                          line-height: 1.5;
+                        "
+                      >
+                        {{refundInfo}}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+                <table width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="center" style="padding: 20px 0">
+                      <a
+                        href="{{frontendUrl}}/activities"
+                        style="
+                          display: inline-block;
+                          padding: 12px 40px;
+                          background-color: #cc0000;
+                          color: #ffffff;
+                          text-decoration: none;
+                          border-radius: 25px;
+                          font-size: 15px;
+                          font-weight: bold;
+                        "
+                      >
+                        VER ACTIVIDADES DISPONIBLES
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <table width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td align="left" style="padding-top: 15px">
+                      <h3
+                        style="
+                          margin: 0;
+                          color: #090808;
+                          font-size: 18px;
+                          line-height: 1.5;
+                        "
+                      >
+                        Sentimos las molestias que esto pueda ocasionar. Puedes
+                        reservar otra clase en cualquier momento.
+                      </h3>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+
+          <table
+            width="600"
+            cellspacing="0"
+            cellpadding="0"
+            style="background-color: #060505"
+          >
+            <tr>
+              <td style="padding: 35px 30px 0 30px">
+                <table width="100%" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td
+                      width="50%"
+                      align="left"
+                      valign="top"
+                      style="padding: 0 15px 20px 15px"
+                    >
+                      <h1
+                        style="
+                          margin: 0 0 15px 0;
+                          color: #ffffff;
+                          font-size: 24px;
+                        "
+                      >
+                        Contactanos
+                      </h1>
+                      <p style="margin: 5px 0; color: #ffffff; font-size: 14px">
+                        <a
+                          href="mailto:info@providencefitness.com"
+                          style="color: #ffffff; text-decoration: none"
+                        >
+                          info@providencefitness.com
+                        </a>
+                      </p>
+                      <p style="margin: 5px 0; color: #ffffff; font-size: 14px">
+                        <a
+                          href="tel:5551234567"
+                          style="color: #ffffff; text-decoration: none"
+                        >
+                          (555) 123-4567
+                        </a>
+                      </p>
+                      <p style="margin: 5px 0; color: #ffffff; font-size: 14px">
+                        Provincia de Buenos Aires 760
+                      </p>
+                    </td>
+
+                    <td
+                      width="50%"
+                      align="left"
+                      valign="top"
+                      style="padding: 25px 0 10px 35px"
+                    >
+                      <h1
+                        style="
+                          margin: 0 0 10px 0;
+                          color: #ffffff;
+                          font-size: 24px;
+                          line-height: 1.5;
+                        "
+                      >
+                        Encuentranos
+                      </h1>
+                      <table cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td style="padding-right: 15px">
+                            <a
+                              href="https://www.facebook.com/media/set/?set=a.196196340001055&type=3&locale=es_LA"
+                              target="_blank"
+                            >
+                              <img
+                                src="https://eyekwfc.stripocdn.email/content/assets/img/social-icons/rounded-black/facebook-rounded-black.png"
+                                alt="Facebook"
+                                width="32"
+                                style="display: block"
+                              />
+                            </a>
+                          </td>
+                          <td style="padding-right: 15px">
+                            <a
+                              href="https://www.instagram.com/provi.dencefitness/"
+                              target="_blank"
+                            >
+                              <img
+                                src="https://eyekwfc.stripocdn.email/content/assets/img/social-icons/rounded-black/instagram-rounded-black.png"
+                                alt="Instagram"
+                                width="32"
+                                style="display: block"
+                              />
+                            </a>
+                          </td>
+                          <td>
+                            <a
+                              href="https://x.com/ProvidenceApi"
+                              target="_blank"
+                            >
+                              <img
+                                src="https://eyekwfc.stripocdn.email/content/assets/img/social-icons/rounded-black/x-rounded-black.png"
+                                alt="X"
+                                width="32"
+                                style="display: block"
+                              />
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr>
+              <td align="center" style="padding: 20px 30px">
+                <p style="margin: 0; color: #ffffff; font-size: 13px">
+                  © 2026 Providence Fitness. Todos los derechos reservados.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

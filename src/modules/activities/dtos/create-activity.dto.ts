@@ -12,7 +12,6 @@ import {
   IsOptional,
   MinLength,
   MaxLength,
-  IsDecimal,
 } from 'class-validator';
 
 export class CreateActivityDto {
