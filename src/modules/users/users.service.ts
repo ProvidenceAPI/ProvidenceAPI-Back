@@ -17,6 +17,9 @@ import { FileUploadService } from '../file-upload/file-upload.service';
 import { ReservationsService } from '../reservations/reservations.service';
 import { AuthProvider } from 'src/common/enum/authProvider.enum';
 import { CompleteGoogleProfileDto } from './dtos/complete-google.dto';
+import { CreateUserAdminDto } from './dtos/create-user-admin.dto';
+import * as bcrypt from 'bcrypt';
+import { Genre } from 'src/common/enum/genre.enum';
 
 @Injectable()
 export class UsersService {
@@ -123,5 +126,64 @@ export class UsersService {
     user.profileImage = finalUrl;
     await this.userRepository.save(user);
     return user;
+  }
+
+  async updateUserRole(id: string, newRole: Rol) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.rol === newRole) {
+      throw new BadRequestException('User already has this role');
+    }
+    if (user.rol === Rol.superAdmin) {
+      throw new ForbiddenException('Cannot change SuperAdmin role');
+    }
+    if (newRole === Rol.superAdmin) {
+      throw new ForbiddenException('Cannot promote users to SuperAdmin');
+    }
+    user.rol = newRole;
+    await this.userRepository.save(user);
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  async createUserByAdmin(dto: CreateUserAdminDto) {
+    const existingUser = await this.userRepository.findOne({
+      where: { email: dto.email },
+    });
+    if (existingUser) {
+      throw new BadRequestException('Email already exists');
+    }
+    const existingDni = await this.userRepository.findOne({
+      where: { dni: Number(dto.dni) },
+    });
+    if (existingDni) {
+      throw new BadRequestException('DNI already exists');
+    }
+    if (dto.role === Rol.superAdmin) {
+      throw new ForbiddenException('Cannot create SuperAdmin users');
+    }
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const newUser = new User();
+    newUser.name = dto.name;
+    newUser.lastname = dto.lastname;
+    newUser.email = dto.email;
+    newUser.password = hashedPassword;
+    newUser.birthdate = new Date(dto.birthdate);
+    newUser.phone = dto.phone;
+    newUser.dni = Number(dto.dni);
+    newUser.genre = dto.genre || Genre.other;
+    newUser.rol = dto.role || Rol.user;
+    newUser.status = UserStatus.active;
+    newUser.provider = AuthProvider.LOCAL;
+
+    if (dto.profileImage) {
+      newUser.profileImage = dto.profileImage;
+    }
+    const savedUser = await this.userRepository.save(newUser);
+    const { password, ...userWithoutPassword } = savedUser;
+    return userWithoutPassword;
   }
 }

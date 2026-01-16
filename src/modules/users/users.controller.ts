@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Post,
   Put,
   Req,
   UploadedFile,
@@ -29,12 +30,32 @@ import { UpdateUserStatusDto } from './dtos/updateStatus.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UpdateUserAdminDto } from './dtos/updateUser-Admin.dto';
 import { CompleteGoogleProfileDto } from './dtos/complete-google.dto';
+import { UpdateUserRoleDto } from './dtos/update-rol.dto';
+import { CreateUserAdminDto } from './dtos/create-user-admin.dto';
 
 @ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
   constructor(private readonly userService: UsersService) {}
+
+  @Post()
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.superAdmin)
+  @ApiOperation({ summary: 'Create new user (SuperAdmin only)' })
+  @ApiResponse({
+    status: 201,
+    description: 'User created successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email already exists or validation error',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  createUser(@Body() dto: CreateUserAdminDto) {
+    return this.userService.createUserByAdmin(dto);
+  }
 
   @Get('profile')
   @UseGuards(AuthGuard('jwt'))
@@ -171,5 +192,21 @@ export class UsersController {
     @Body() dto: UpdateUserStatusDto,
   ) {
     return this.userService.updateStatus(id, dto);
+  }
+
+  @Put(':id/role')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.superAdmin)
+  @ApiOperation({ summary: 'Update user role (SuperAdmin only)' })
+  @ApiResponse({ status: 200, description: 'Role updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid role change' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  updateUserRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateUserRoleDto,
+  ) {
+    return this.userService.updateUserRole(id, dto.role);
   }
 }
