@@ -12,6 +12,7 @@ import { ReservationsModule } from './modules/reservations/reservations.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
+import { AdminNotificationsModule } from './modules/admin-notifications/admin-notifications.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
     ReservationsModule,
     PaymentsModule,
     SubscriptionsModule,
+    AdminNotificationsModule,
   ],
   controllers: [],
   providers: [],
