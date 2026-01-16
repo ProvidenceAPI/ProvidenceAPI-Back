@@ -44,6 +44,19 @@ export class UsersService {
     }
   }
 
+  async findAllActive(): Promise<User[]> {
+    try {
+      return await this.userRepository.find({
+        where: { status: UserStatus.active },
+        select: {
+          password: false,
+        },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error fetching active users');
+    }
+  }
+
   async getUserById(id: string) {
     try {
       const findUser = await this.userRepository.findOne({ where: { id } });
