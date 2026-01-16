@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PaymentStatus } from 'src/common/enum/paymentStatus.enum';
 
 export class PaymentResponseDto {
   @ApiProperty({
@@ -6,6 +7,12 @@ export class PaymentResponseDto {
     description: 'Payment ID',
   })
   paymentId: string;
+
+  @ApiProperty({
+    example: 'pref-abc123xyz',
+    description: 'MercadoPago preference ID',
+  })
+  preferenceId: string;
 
   @ApiProperty({
     example:
@@ -21,8 +28,9 @@ export class PaymentResponseDto {
   amount: number;
 
   @ApiProperty({
-    example: 'pending',
+    enum: PaymentStatus,
+    example: PaymentStatus.pending,
     description: 'Payment status',
   })
-  status: string;
+  status: PaymentStatus;
 }

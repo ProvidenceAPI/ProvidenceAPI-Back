@@ -109,8 +109,14 @@ export class PaymentsService {
       });
       savedPayment.mercadoPagoPreferenceId = preference.id;
       await this.paymentRepository.save(savedPayment);
+      if (!preference.id) {
+        throw new InternalServerErrorException(
+          'MercadoPago preference ID not generated',
+        );
+      }
       return {
         paymentId: savedPayment.id,
+        preferenceId: preference.id,
         initPoint: preference.init_point || '',
         amount,
         status: PaymentStatus.pending,
