@@ -88,7 +88,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMe(@Req() req) {
-    console.log('👤 Usuario autenticado:', req.user);
+    console.log('ðŸ‘¤ Usuario autenticado:', req.user);
     const user = await this.usersService.getUserById(req.user.id);
     return user;
   }

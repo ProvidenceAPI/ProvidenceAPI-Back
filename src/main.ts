@@ -65,7 +65,7 @@ async function bootstrap() {
     `🚀 Application is running on: https://providenceapi-back.onrender.com`,
   );
   console.log(
-    `📚 Swagger documentation: https://providenceapi-back.onrender.com:/api/docs`,
+    `📚 Swagger documentation: https://providenceapi-back.onrender.com/api/docs`,
   );
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 }
