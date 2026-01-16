@@ -1,4 +1,5 @@
 import { config as dotenvConfig } from 'dotenv';
+import * as bodyParser from 'body-parser';
 
 dotenvConfig({
   path:
@@ -53,6 +54,9 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
+
+  app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({ extended: true }));
 
   const port = process.env.PORT || 3001;
   await app.listen(port, '0.0.0.0');

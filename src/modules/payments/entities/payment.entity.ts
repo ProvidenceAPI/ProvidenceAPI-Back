@@ -42,10 +42,18 @@ export class Payment {
   @ApiProperty({
     example: 'MP-123456789',
     required: false,
-    description: 'External provider payment ID (MercadoPago, Stripe, etc)',
+    description: 'MercadoPago payment ID',
   })
   @Column({ nullable: true })
-  providerPaymentId?: string;
+  mercadoPagoId?: string;
+
+  @ApiProperty({
+    example: 'pref-abc123xyz',
+    required: false,
+    description: 'MercadoPago preference ID',
+  })
+  @Column({ nullable: true })
+  mercadoPagoPreferenceId?: string;
 
   @ApiProperty({
     example: '2025-01-08T18:30:00.000Z',
@@ -62,7 +70,9 @@ export class Payment {
   @ApiProperty({ type: () => Reservation })
   @ManyToOne(() => Reservation, (reservation) => reservation.payments, {
     eager: true,
+    nullable: true,
   })
   @ManyToOne(() => Reservation, { eager: true })
+  @JoinColumn({ name: 'reservationId' })
   reservation: Reservation;
 }
