@@ -185,26 +185,26 @@ export class TurnsService {
 
       if (filterDto?.startDate) {
         queryBuilder.andWhere('turn.date >= :startDate', {
-          startDate: filterDto.startDate,
+          startDate: filterDto.startDate.split('T')[0],
         });
       }
 
       if (filterDto?.endDate) {
         queryBuilder.andWhere('turn.date <= :endDate', {
-          endDate: filterDto.endDate,
+          endDate: filterDto.endDate.split('T')[0],
         });
       }
 
-      if (filterDto?.status) {
+      if (filterDto?.status && filterDto.onlyAvailable !== true) {
         queryBuilder.andWhere('turn.status = :status', {
           status: filterDto.status,
         });
       }
 
-      if (filterDto?.onlyAvailable) {
+      if (filterDto?.onlyAvailable === true) {
         queryBuilder.andWhere('turn.availableSpots > 0');
-        queryBuilder.andWhere('turn.status = :status', {
-          status: TurnStatus.available,
+        queryBuilder.andWhere('turn.status = :availableStatus', {
+          availableStatus: TurnStatus.available,
         });
       }
 
