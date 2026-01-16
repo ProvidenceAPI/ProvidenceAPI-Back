@@ -3,6 +3,7 @@ import { AuthProvider } from 'src/common/enum/authProvider.enum';
 import { Genre } from 'src/common/enum/genre.enum';
 import { Rol } from 'src/common/enum/roles.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
+import { Activity } from 'src/modules/activities/entities/activity.entity';
 import { Payment } from 'src/modules/payments/entities/payment.entity';
 import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
 import { Subscription } from 'src/modules/subscriptions/entities/subscriptions.entity';
@@ -122,4 +123,12 @@ export class User {
   })
   @OneToMany(() => Subscription, (subscription) => subscription.user)
   subscriptions: Subscription[];
+
+  @ApiProperty({
+    type: () => Activity,
+    isArray: true,
+    description: 'Activities created by this user',
+  })
+  @OneToMany(() => Activity, (activity) => activity.createdBy)
+  createdActivities: Activity[];
 }
