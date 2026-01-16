@@ -17,6 +17,7 @@ import { ConfigService } from '@nestjs/config';
 import MercadoPagoConfig, { Preference } from 'mercadopago';
 import { MercadoPagoService } from '../mercadopago/mercadopago.service';
 import { PaymentResponseDto } from './dtos/payment-response.dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class PaymentsService {
@@ -32,6 +33,7 @@ export class PaymentsService {
     private readonly subscriptionsService: SubscriptionsService,
     private readonly configService: ConfigService,
     private readonly mercadopagoService: MercadoPagoService,
+    private readonly mailService: MailService,
   ) {}
 
   async createPayment(
@@ -220,8 +222,38 @@ export class PaymentsService {
         }
       }
     }
-    // TODO: Enviar email de confirmación
-    // await this.emailService.sendPaymentConfirmation(payment);
+    try {
+      await this.mailService.sendPaymentConfirmation(payment.user.email, {
+        userName: payment.user.name,
+        activityName:
+          payment.reservation?.turn?.activity?.name || 'Suscripción',
+        amount: payment.amount,
+        paymentDate: new Date().toLocaleDateString('es-ES', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        paymentMethod: 'MercadoPago',
+        transactionId: payment.mercadoPagoId,
+        reservationDate: payment.reservation
+          ? payment.reservation.activityDate.toLocaleDateString('es-ES', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })
+          : 'N/A',
+        reservationTime: payment.reservation?.startTime || 'N/A',
+        frontendUrl:
+          this.configService.get<string>('FRONTEND_URL') ||
+          'http://localhost:3001',
+      });
+    } catch (error) {
+      console.error(
+        '❌ Error sending payment confirmation email:',
+        error.message,
+      );
+    }
   }
 
   async updatePaymentStatus(paymentId: string, status: PaymentStatus) {

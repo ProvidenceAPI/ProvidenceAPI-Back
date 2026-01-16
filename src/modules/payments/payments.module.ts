@@ -7,6 +7,7 @@ import { ReservationsModule } from '../reservations/reservations.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { Activity } from '../activities/entities/activity.entity';
 import { MercadoPagoModule } from '../mercadopago/mercadopago.module';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { MercadoPagoModule } from '../mercadopago/mercadopago.module';
     ReservationsModule,
     SubscriptionsModule,
     MercadoPagoModule,
+    MailModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService],
