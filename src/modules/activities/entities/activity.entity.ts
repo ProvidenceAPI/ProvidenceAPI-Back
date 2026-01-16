@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
 import { Subscription } from 'src/modules/subscriptions/entities/subscriptions.entity';
+import { User } from 'src/modules/users/entities/users.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -8,6 +9,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  JoinColumn,
+  ManyToOne,
 } from 'typeorm';
 
 export enum ActivityStatus {
@@ -125,4 +128,13 @@ export class Activity {
   @ApiProperty({ type: () => Subscription, isArray: true })
   @OneToMany(() => Subscription, (subscription) => subscription.activity)
   subscriptions: Subscription[];
+
+  @ApiProperty({
+    type: () => User,
+    description: 'User who created this activity',
+    required: false,
+  })
+  @ManyToOne(() => User, (user) => user.createdActivities, { nullable: true })
+  @JoinColumn({ name: 'createdById' })
+  createdBy?: User;
 }
