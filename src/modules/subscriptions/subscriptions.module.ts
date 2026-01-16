@@ -5,11 +5,15 @@ import { Activity } from '../activities/entities/activity.entity';
 import { Subscription } from './entities/subscriptions.entity';
 import { SubscriptionsController } from './subscriptions.controller';
 import { SubscriptionsService } from './subscriptions.service';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Subscription, User, Activity])],
+  imports: [
+    TypeOrmModule.forFeature([Subscription, User, Activity]),
+    MailModule,
+  ],
   controllers: [SubscriptionsController],
-  providers: [SubscriptionsService],
+  providers: [SubscriptionsService, SubscriptionsService],
   exports: [SubscriptionsService],
 })
 export class SubscriptionsModule {}
