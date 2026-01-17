@@ -107,7 +107,6 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Profile image updated' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   updateProfileImage(@Req() req, @UploadedFile() file: Express.Multer.File) {
-    console.log('FILE ACCEPTED:', file?.mimetype);
     return this.userService.updateProfileImage(req.user.id, file);
   }
 

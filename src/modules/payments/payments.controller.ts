@@ -8,7 +8,6 @@ import {
   Param,
   ParseUUIDPipe,
   UseGuards,
-  Headers,
   HttpCode,
   UsePipes,
 } from '@nestjs/common';

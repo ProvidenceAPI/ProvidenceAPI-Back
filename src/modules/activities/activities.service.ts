@@ -32,19 +32,15 @@ export class ActivitiesService {
       const existingActivity = await this.activityRepository.findOne({
         where: { name: createActivityDto.name },
       });
-
       if (existingActivity) {
         throw new BadRequestException(
           `Activity with name "${createActivityDto.name}" already exists`,
         );
       }
-
       const newActivity = this.activityRepository.create(createActivityDto);
       const savedActivity = await this.activityRepository.save(newActivity);
-
       try {
         const users = await this.usersService.findAllActive();
-
         for (const user of users) {
           await this.mailService.sendAdminNotification(user.email, {
             title: '¡Nueva Actividad Disponible! 🎉',
@@ -59,7 +55,6 @@ export class ActivitiesService {
           error.message,
         );
       }
-
       return savedActivity;
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
@@ -81,17 +76,14 @@ export class ActivitiesService {
 
       const queryBuilder =
         this.activityRepository.createQueryBuilder('activity');
-
       if (status) {
         queryBuilder.andWhere('activity.status = :status', { status });
       }
-
       if (name) {
         queryBuilder.andWhere('activity.name ILIKE :name', {
           name: `%${name}%`,
         });
       }
-
       if (minPrice !== undefined && maxPrice !== undefined) {
         queryBuilder.andWhere(
           'activity.price BETWEEN :minPrice AND :maxPrice',
@@ -105,18 +97,14 @@ export class ActivitiesService {
       } else if (maxPrice !== undefined) {
         queryBuilder.andWhere('activity.price <= :maxPrice', { maxPrice });
       }
-
       if (hasFreeTrial !== undefined) {
         queryBuilder.andWhere('activity.hasFreeTrial = :hasFreeTrial', {
           hasFreeTrial,
         });
       }
-
       const skip = (page - 1) * limit;
       queryBuilder.skip(skip).take(limit);
-
       queryBuilder.orderBy('activity.createdAt', 'DESC');
-
       const [activities, total] = await queryBuilder.getManyAndCount();
 
       return {
@@ -138,11 +126,9 @@ export class ActivitiesService {
       const activity = await this.activityRepository.findOne({
         where: { id },
       });
-
       if (!activity) {
         throw new NotFoundException(`Activity with ID "${id}" not found`);
       }
-
       return activity;
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
@@ -156,12 +142,10 @@ export class ActivitiesService {
   ): Promise<Activity> {
     try {
       const activity = await this.findOne(id);
-
       if (updateActivityDto.name && updateActivityDto.name !== activity.name) {
         const existingActivity = await this.activityRepository.findOne({
           where: { name: updateActivityDto.name },
         });
-
         if (existingActivity) {
           throw new BadRequestException(
             `Activity with name "${updateActivityDto.name}" already exists`,
@@ -188,9 +172,7 @@ export class ActivitiesService {
   ): Promise<Activity> {
     try {
       const activity = await this.findOne(activityId);
-
       let finalUrl: string;
-
       if (file) {
         finalUrl = await this.fileUploadService.uploadImage(file, 'activities');
       } else if (imageUrl) {
@@ -200,7 +182,6 @@ export class ActivitiesService {
           'Either file or imageUrl must be provided',
         );
       }
-
       activity.image = finalUrl;
       return await this.activityRepository.save(activity);
     } catch (error) {
@@ -216,9 +197,7 @@ export class ActivitiesService {
   async remove(id: string): Promise<{ message: string }> {
     try {
       const activity = await this.findOne(id);
-
       await this.activityRepository.remove(activity);
-
       return {
         message: `Activity "${activity.name}" has been deleted successfully`,
       };
@@ -231,14 +210,11 @@ export class ActivitiesService {
   async toggleStatus(id: string): Promise<Activity> {
     try {
       const activity = await this.findOne(id);
-
       const newStatus =
         activity.status === ActivityStatus.active
           ? ActivityStatus.inactive
           : ActivityStatus.active;
-
       await this.activityRepository.update(id, { status: newStatus });
-
       return await this.findOne(id);
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
