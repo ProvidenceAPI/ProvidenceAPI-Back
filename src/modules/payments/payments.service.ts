@@ -1,8 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
-  ForbiddenException,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -16,7 +14,6 @@ import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { ConfigService } from '@nestjs/config';
 import MercadoPagoConfig, { Preference } from 'mercadopago';
 import { MercadoPagoService } from '../mercadopago/mercadopago.service';
-import { PaymentResponseDto } from './dtos/payment-response.dto';
 import { MailService } from '../mail/mail.service';
 
 @Injectable()
@@ -36,49 +33,19 @@ export class PaymentsService {
     private readonly mailService: MailService,
   ) {}
 
-  async createPayment(
-    userId: string,
-    dto: CreatePaymentDto,
-  ): Promise<PaymentResponseDto> {
-    let amount: number;
-    let activityName: string;
-    let activityId: string;
-    let reservationId: string | undefined;
-    let isSubscription = false;
-    if (dto.reservationId) {
-      const reservation = await this.reservationsService.findById(
-        dto.reservationId,
-      );
-
-      if (!reservation) throw new NotFoundException('Reservation not found');
-      if (reservation.user.id !== userId)
-        throw new ForbiddenException('This reservation is not yours');
-      if (reservation.paymentStatus === PaymentStatus.approved)
-        throw new BadRequestException('Reservation already paid');
-
-      amount = Number(reservation.activity.price);
-      activityName = reservation.activity.name;
-      activityId = reservation.activity.id;
-      reservationId = reservation.id;
-    } else if (dto.activityId) {
-      const activity = await this.activityRepository.findOne({
-        where: { id: dto.activityId },
-      });
-      if (!activity) throw new NotFoundException('Activity not found');
-
-      amount = Number(activity.price);
-      activityName = activity.name;
-      activityId = activity.id;
-      isSubscription = true;
-    } else {
-      throw new BadRequestException(
-        'Either reservationId or activityId must be provided',
-      );
-    }
+  async createPayment(userId: string, dto: CreatePaymentDto) {
+    const activity = await this.activityRepository.findOne({
+      where: { id: dto.activityId },
+    });
+    if (!activity) throw new NotFoundException('Activity not found');
+    const amount = Number(activity.price);
+    const activityName = activity.name;
+    const activityId = activity.id;
+    const reservationId = null;
     const payment = this.paymentRepository.create({
-      amount,
+      amount: amount,
       user: { id: userId } as any,
-      reservation: reservationId ? ({ id: reservationId } as any) : null,
+      reservation: undefined,
       status: PaymentStatus.pending,
     });
     const savedPayment = await this.paymentRepository.save(payment);
@@ -100,13 +67,13 @@ export class PaymentsService {
           failure: `${this.configService.get('FRONTEND_URL')}/payment/failure`,
           pending: `${this.configService.get('FRONTEND_URL')}/payment/pending`,
         },
-        notification_url: `${this.configService.get('PUBLIC_API_URL')}/payments/webhook`,
+        notification_url: `${this.configService.get('PUBLIC_API_URL')}/api/payments/webhook`,
         metadata: {
-          userId,
-          activityId,
-          reservationId: reservationId || null,
-          isSubscription: isSubscription.toString(),
-          internalPaymentId: savedPayment.id,
+          user_id: userId,
+          activity_id: activityId,
+          reservation_id: reservationId || null,
+          is_subscription: 'true',
+          internal_payment_id: savedPayment.id,
         },
       });
       savedPayment.mercadoPagoPreferenceId = preference.id;
@@ -133,17 +100,42 @@ export class PaymentsService {
 
   async handleWebhook(notification: any) {
     try {
-      console.log('Webhook received:', JSON.stringify(notification, null, 2));
+      console.log('Full notification:', JSON.stringify(notification, null, 2));
       if (notification.topic === 'merchant_order') {
         const orderId = notification.resource.split('/').pop();
-        console.log('Merchant order received:', orderId);
-        return { received: true, message: 'Merchant order received' };
+        const orderResponse = await fetch(notification.resource, {
+          headers: {
+            Authorization: `Bearer ${this.configService.get('MP_ACCESS_TOKEN')}`,
+          },
+        });
+        const orderData = await orderResponse.json();
+        console.log('Order data:', orderData);
+        const payment = await this.paymentRepository.findOne({
+          where: { mercadoPagoPreferenceId: orderData.preference_id },
+          relations: ['user'],
+        });
+        if (!payment) {
+          return { received: true, message: 'Payment not found in database' };
+        }
+        if (orderData.payments && orderData.payments.length > 0) {
+          const paymentId = orderData.payments[0].id;
+          const paymentData =
+            await this.mercadopagoService.getPayment(paymentId);
+
+          if (paymentData.status === 'approved') {
+            await this.handleApprovedPayment(payment, paymentData);
+          } else if (paymentData.status === 'rejected') {
+            payment.status = PaymentStatus.rejected;
+            await this.paymentRepository.save(payment);
+          }
+          return { received: true, status: paymentData.status };
+        }
+        return { received: true, message: 'No payments in order' };
       }
       if (notification.type !== 'payment') {
         return { received: true, message: 'Notification type not supported' };
       }
       const paymentId = notification.data.id;
-
       const paymentData = await this.mercadopagoService.getPayment(paymentId);
       if (!paymentData) {
         console.error('Payment data not found in MercadoPago');
@@ -154,13 +146,11 @@ export class PaymentsService {
 
       const payment = await this.paymentRepository.findOne({
         where: { id: internalPaymentId },
-        relations: ['reservation', 'reservation.activity', 'user'],
+        relations: ['user'],
       });
       if (!payment) {
-        console.error('Payment not found in database');
         return { received: true, message: 'Payment not found in database' };
       }
-
       if (paymentData.status === 'approved') {
         await this.handleApprovedPayment(payment, paymentData);
       } else if (paymentData.status === 'rejected') {
@@ -182,8 +172,8 @@ export class PaymentsService {
     payment.mercadoPagoId = paymentData.id.toString();
 
     const metadata = paymentData.metadata || {};
-    const isSubscription = metadata.isSubscription === 'true';
-    const activityId = metadata.activityId;
+    const isSubscription = metadata.is_subscription === 'true';
+    const activityId = metadata.activity_id;
     const userId = payment.user.id;
 
     if (payment.reservation) {
@@ -192,35 +182,43 @@ export class PaymentsService {
     } else {
       await this.paymentRepository.save(payment);
     }
+    let targetActivityId: string | undefined;
+    if (isSubscription && activityId) {
+      targetActivityId = activityId;
+    } else if (payment.reservation?.activity?.id) {
+      targetActivityId = payment.reservation.activity.id;
+    } else {
+      console.error('❌ No activityId found in metadata or reservation');
+    }
 
-    if (isSubscription || payment.reservation) {
-      const targetActivityId = activityId || payment.reservation?.activity?.id;
-      if (targetActivityId) {
-        try {
-          const hasActiveSubscription =
-            await this.subscriptionsService.checkSubscriptionStatus(
-              userId,
-              targetActivityId,
-            );
-          if (hasActiveSubscription) {
-            await this.subscriptionsService.extendSubscription(
-              userId,
-              targetActivityId,
-              payment.id,
-            );
-          } else {
-            await this.subscriptionsService.createSubscription(
-              userId,
-              targetActivityId,
-              payment.id,
-              false,
-            );
-          }
-          console.log(`Subscription created/extended for user ${userId}`);
-        } catch (error) {
-          console.error('Error creating/extending subscription:', error);
+    if (targetActivityId) {
+      try {
+        const hasActiveSubscription =
+          await this.subscriptionsService.checkSubscriptionStatus(
+            userId,
+            targetActivityId,
+          );
+
+        if (hasActiveSubscription) {
+          await this.subscriptionsService.extendSubscription(
+            userId,
+            targetActivityId,
+            payment.id,
+          );
+        } else {
+          await this.subscriptionsService.createSubscription(
+            userId,
+            targetActivityId,
+            payment.id,
+            false,
+          );
         }
+      } catch (error) {
+        console.error('❌ Error creating/extending subscription:', error);
+        console.error('Error stack:', error.stack);
       }
+    } else {
+      console.error('❌ Cannot create subscription: no targetActivityId');
     }
     try {
       await this.mailService.sendPaymentConfirmation(payment.user.email, {

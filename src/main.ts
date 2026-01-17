@@ -17,7 +17,14 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: [process.env.FRONTEND_URL || 'http://localhost:3000'],
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'https://www.mercadopago.com',
+      'https://www.mercadopago.com.ar',
+      'https://api.mercadopago.com',
+      'https://api.mercadolibre.com',
+    ],
+
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -26,6 +33,8 @@ async function bootstrap() {
       'Accept',
       'Origin',
       'X-Requested-With',
+      'x-signature',
+      'x-request-id',
     ],
     exposedHeaders: ['Authorization'],
     preflightContinue: false,

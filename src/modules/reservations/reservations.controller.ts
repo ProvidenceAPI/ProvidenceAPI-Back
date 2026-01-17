@@ -41,7 +41,6 @@ export class ReservationsController {
   }
 
   @Post()
-  @Roles(Rol.user)
   @ApiOperation({ summary: 'Create a reservation' })
   @ApiResponse({ status: 201, description: 'Reservation created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid date or time range' })
