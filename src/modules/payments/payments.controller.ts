@@ -9,6 +9,8 @@ import {
   ParseUUIDPipe,
   UseGuards,
   Headers,
+  HttpCode,
+  UsePipes,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import {
@@ -54,6 +56,8 @@ export class PaymentsController {
   }
 
   @Post('webhook')
+  @UsePipes()
+  @HttpCode(200)
   @ApiOperation({
     summary: 'MercadoPago webhook endpoint',
     description: 'Receives payment notifications from MercadoPago',
