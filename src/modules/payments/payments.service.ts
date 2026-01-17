@@ -100,7 +100,6 @@ export class PaymentsService {
 
   async handleWebhook(notification: any) {
     try {
-      console.log('Full notification:', JSON.stringify(notification, null, 2));
       if (notification.topic === 'merchant_order') {
         const orderId = notification.resource.split('/').pop();
         const orderResponse = await fetch(notification.resource, {
@@ -280,11 +279,9 @@ export class PaymentsService {
     const payment = await this.paymentRepository.findOne({
       where: { id: paymentId },
     });
-
     if (!payment) {
       throw new NotFoundException('Payment not found');
     }
-
     return payment;
   }
 }

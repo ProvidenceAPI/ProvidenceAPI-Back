@@ -13,7 +13,10 @@ import { CreateReservationDto } from './dtos/reservation.dto';
 import { Rol } from 'src/common/enum/roles.enum';
 import { ReservationStatus } from 'src/common/enum/reservations.enum';
 import { UserStatus } from 'src/common/enum/userStatus.enum';
-import { Activity } from '../activities/entities/activity.entity';
+import {
+  Activity,
+  ActivityStatus,
+} from '../activities/entities/activity.entity';
 import { TurnsService } from '../turns/turns.service';
 import { TurnStatus } from '../turns/entities/turn.entity';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
@@ -44,6 +47,11 @@ export class ReservationsService {
       throw new ForbiddenException('Your account is cancelled');
 
     const turn = await this.turnsService.findOne(dto.turnId);
+    if (turn.activity.status === ActivityStatus.inactive) {
+      throw new BadRequestException(
+        'Cannot reserve turns for inactive activities',
+      );
+    }
     if (turn.status === TurnStatus.cancelled)
       throw new BadRequestException('This turn has been cancelled');
     if (turn.status === TurnStatus.completed)
@@ -104,7 +112,6 @@ export class ReservationsService {
     });
 
     const savedReservation = await this.reservationRepo.save(reservation);
-
     await this.turnsService.decrementAvailableSpots(dto.turnId);
 
     if (turn.isFreeTrial && !hasActiveSubscription) {
@@ -112,7 +119,6 @@ export class ReservationsService {
         userId,
         turn.activityId,
       );
-
       console.log(
         `✅ User ${userId} used their free trial on activity ${turn.activityId}`,
       );
@@ -134,7 +140,6 @@ export class ReservationsService {
     } catch (error) {
       console.error('Error sending reservation confirmation email:', error);
     }
-
     return savedReservation;
   }
 
@@ -146,13 +151,10 @@ export class ReservationsService {
       where: { id: reservationId },
       relations: ['user', 'turn', 'turn.activity'],
     });
-
     if (!reservation) throw new NotFoundException('Reservation not found');
-
     if (reservation.status === ReservationStatus.cancelled) {
       throw new BadRequestException('Reservation already cancelled');
     }
-
     const isOwner = reservation.user.id === requester.id;
     const isAdmin =
       requester.rol === Rol.admin || requester.rol === Rol.superAdmin;
@@ -168,10 +170,8 @@ export class ReservationsService {
           ? reservation.activityDate.toISOString().split('T')[0]
           : reservation.activityDate;
       const turnDateTime = new Date(`${activityDate}T${reservation.startTime}`);
-
       const hoursUntilTurn =
         (turnDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
       const activity = reservation.turn.activity;
       const cancellationTimeLimit = activity?.cancellationTime || 24;
 
@@ -181,10 +181,8 @@ export class ReservationsService {
         );
       }
     }
-
     reservation.status = ReservationStatus.cancelled;
     await this.reservationRepo.save(reservation);
-
     if (reservation.turnId) {
       await this.turnsService.incrementAvailableSpots(reservation.turnId);
     }
@@ -215,7 +213,6 @@ export class ReservationsService {
     } catch (error) {
       console.error('❌ Error sending cancellation email:', error.message);
     }
-
     return { message: 'Reservation cancelled successfully' };
   }
 
@@ -240,9 +237,7 @@ export class ReservationsService {
     for (const reservation of activeReservations) {
       reservation.status = ReservationStatus.cancelled;
     }
-
     await this.reservationRepo.save(activeReservations);
-
     await this.turnsService.cancelTurn(turnId);
 
     let emailsSent = 0;
@@ -271,11 +266,9 @@ export class ReservationsService {
         emailsFailed++;
       }
     }
-
     console.log(
       `Turn ${turnId} cancelled. Emails sent: ${emailsSent}, failed: ${emailsFailed}`,
     );
-
     return {
       message: `Turn cancelled successfully. ${activeReservations.length} users were notified (${emailsSent} emails sent, ${emailsFailed} failed).`,
       reservationsCancelled: activeReservations.length,

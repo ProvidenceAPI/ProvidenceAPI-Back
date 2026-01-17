@@ -1,10 +1,7 @@
 import {
   Controller,
   Get,
-  Post,
-  Put,
   Param,
-  Body,
   Req,
   UseGuards,
   ParseUUIDPipe,
