@@ -91,6 +91,21 @@ export class ReservationsService {
     if (turnDateTime < now)
       throw new BadRequestException('Cannot reserve past turns');
 
+    const reservationDate = turnDate;
+    const existingReservationSameDay = await this.reservationRepo.findOne({
+      where: {
+        user: { id: userId },
+        activityId: turn.activityId,
+        activityDate: new Date(reservationDate),
+        status: ReservationStatus.confirmed,
+      },
+    });
+    if (existingReservationSameDay) {
+      throw new ConflictException(
+        'You already have a reservation for this activity today. Only one reservation per day per activity is allowed.',
+      );
+    }
+
     const existingReservation = await this.reservationRepo.findOne({
       where: {
         user: { id: userId },
