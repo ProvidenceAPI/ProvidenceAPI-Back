@@ -11,6 +11,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiBody,
 } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from 'src/common/guards/roles.guard';
@@ -36,13 +37,24 @@ export class NotificationsController {
 
   @Post('admin/send-promotion')
   @Roles(Rol.admin, Rol.superAdmin)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        title: { example: '¡Promoción Especial!' },
+        message: { example: 'Solo por hoy se hará efectivo este descuento' },
+        discount: { example: '25%' },
+        validUntil: { example: '2025-01-18' },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Send promotion to all users (Admin)' })
   @ApiResponse({ status: 200, description: 'Promotion sent successfully' })
   async sendPromotion(
     @Body()
     body: {
       title: string;
-      description: string;
+      message: string;
       discount?: string;
       validUntil?: string;
     },
@@ -52,6 +64,16 @@ export class NotificationsController {
 
   @Post('admin/send-closure')
   @Roles(Rol.admin, Rol.superAdmin)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        date: { example: '1 febrero 2026' },
+        reason: { example: 'Por Limpieza del local' },
+        reopenDate: { example: '2 febrero 2026' },
+      },
+    },
+  })
   @ApiOperation({ summary: 'Notify temporary closure (Admin)' })
   @ApiResponse({ status: 200, description: 'Closure notification sent' })
   async sendClosure(

@@ -56,7 +56,10 @@ export class MailService {
     let result = template;
     Object.keys(data).forEach((key) => {
       const regex = new RegExp(`{{${key}}}`, 'g');
-      result = result.replace(regex, data[key] || '');
+      result = result.replace(
+        regex,
+        data[key] != null ? String(data[key]) : '',
+      );
     });
     return result;
   }
