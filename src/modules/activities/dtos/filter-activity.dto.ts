@@ -5,8 +5,6 @@ import { ActivityStatus } from '../entities/activity.entity';
 
 export class FilterActivityDto {
   @ApiPropertyOptional({
-    enum: ActivityStatus,
-    example: ActivityStatus.active,
     description: 'Filtrar por estado de la actividad',
   })
   @IsOptional()

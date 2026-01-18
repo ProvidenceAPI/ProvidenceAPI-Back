@@ -8,7 +8,10 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Turn, TurnStatus } from './entities/turn.entity';
-import { Activity } from '../activities/entities/activity.entity';
+import {
+  Activity,
+  ActivityStatus,
+} from '../activities/entities/activity.entity';
 import { CreateTurnDto } from './dtos/create-turn.dto';
 import { UpdateTurnDto } from './dtos/update-turn.dto';
 import { GenerateTurnsDto } from './dtos/generate-turns.dto';
@@ -27,23 +30,24 @@ export class TurnsService {
     const activity = await this.activityRepository.findOne({
       where: { id: dto.activityId },
     });
-
     if (!activity) {
       throw new NotFoundException('Activity not found');
+    }
+    if (activity.status === ActivityStatus.inactive) {
+      throw new BadRequestException(
+        'Cannot generate turns for inactive activities',
+      );
     }
 
     const startDate = new Date(dto.startDate);
     const endDate = dto.daysAhead
       ? new Date(startDate.getTime() + dto.daysAhead * 24 * 60 * 60 * 1000)
       : new Date(dto.endDate);
-
     if (startDate >= endDate) {
       throw new BadRequestException('Start date must be before end date');
     }
-
     const turnsToCreate: Turn[] = [];
     const currentDate = new Date(startDate);
-
     const dayMap: { [key: string]: number } = {
       Domingo: 0,
       Lunes: 1,
@@ -61,19 +65,15 @@ export class TurnsService {
         time: time,
       };
     });
-
     while (currentDate <= endDate) {
       const dayOfWeek = currentDate.getDay();
-
       const slotsForToday = scheduleSlots.filter(
         (slot) => slot.dayOfWeek === dayOfWeek,
       );
-
       for (const slot of slotsForToday) {
         const [hours, minutes] = slot.time.split(':');
         const startTime = `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}`;
         const endTime = this.calculateEndTime(startTime, activity.duration);
-
         const existingTurn = await this.turnRepository.findOne({
           where: {
             activityId: activity.id,
@@ -81,7 +81,6 @@ export class TurnsService {
             startTime: startTime,
           },
         });
-
         if (!existingTurn) {
           const turn = this.turnRepository.create({
             activityId: activity.id,
@@ -93,23 +92,18 @@ export class TurnsService {
             isFreeTrial: activity.hasFreeTrial,
             status: TurnStatus.available,
           });
-
           turnsToCreate.push(turn);
         }
       }
-
       currentDate.setDate(currentDate.getDate() + 1);
     }
-
     if (turnsToCreate.length === 0) {
       return {
         message: 'No new turns were generated (all already exist)',
         turnsCreated: 0,
       };
     }
-
     const savedTurns = await this.turnRepository.save(turnsToCreate);
-
     return {
       message: `${savedTurns.length} turns generated successfully`,
       turnsCreated: savedTurns.length,
@@ -130,15 +124,17 @@ export class TurnsService {
     const activity = await this.activityRepository.findOne({
       where: { id: dto.activityId },
     });
-
     if (!activity) {
       throw new NotFoundException('Activity not found');
     }
-
+    if (activity.status === ActivityStatus.inactive) {
+      throw new BadRequestException(
+        'Cannot create turns for inactive activities',
+      );
+    }
     if (dto.startTime >= dto.endTime) {
       throw new BadRequestException('Start time must be before end time');
     }
-
     const existingTurn = await this.turnRepository.findOne({
       where: {
         activityId: dto.activityId,
@@ -146,15 +142,12 @@ export class TurnsService {
         startTime: dto.startTime,
       },
     });
-
     if (existingTurn) {
       throw new ConflictException(
         'A turn already exists for this activity at this date and time',
       );
     }
-
     const capacity = dto.capacity || activity.capacity;
-
     const turn = this.turnRepository.create({
       activityId: dto.activityId,
       date: new Date(dto.date),
@@ -166,7 +159,6 @@ export class TurnsService {
       notes: dto.notes,
       status: TurnStatus.available,
     });
-
     return await this.turnRepository.save(turn);
   }
 
@@ -176,7 +168,6 @@ export class TurnsService {
         .createQueryBuilder('turn')
         .leftJoinAndSelect('turn.activity', 'activity')
         .leftJoinAndSelect('turn.reservations', 'reservations');
-
       if (filterDto?.activityId) {
         queryBuilder.andWhere('turn.activityId = :activityId', {
           activityId: filterDto.activityId,
@@ -185,33 +176,29 @@ export class TurnsService {
 
       if (filterDto?.startDate) {
         queryBuilder.andWhere('turn.date >= :startDate', {
-          startDate: filterDto.startDate,
+          startDate: filterDto.startDate.split('T')[0],
         });
       }
-
       if (filterDto?.endDate) {
         queryBuilder.andWhere('turn.date <= :endDate', {
-          endDate: filterDto.endDate,
+          endDate: filterDto.endDate.split('T')[0],
         });
       }
-
-      if (filterDto?.status) {
+      if (filterDto?.status && filterDto.onlyAvailable !== true) {
         queryBuilder.andWhere('turn.status = :status', {
           status: filterDto.status,
         });
       }
 
-      if (filterDto?.onlyAvailable) {
+      if (filterDto?.onlyAvailable === true) {
         queryBuilder.andWhere('turn.availableSpots > 0');
-        queryBuilder.andWhere('turn.status = :status', {
-          status: TurnStatus.available,
+        queryBuilder.andWhere('turn.status = :availableStatus', {
+          availableStatus: TurnStatus.available,
         });
       }
-
       queryBuilder
         .orderBy('turn.date', 'ASC')
         .addOrderBy('turn.startTime', 'ASC');
-
       return await queryBuilder.getMany();
     } catch (error) {
       throw new InternalServerErrorException('Error fetching turns');
@@ -223,54 +210,42 @@ export class TurnsService {
       where: { id },
       relations: ['activity', 'reservations'],
     });
-
     if (!turn) {
       throw new NotFoundException(`Turn with ID "${id}" not found`);
     }
-
     return turn;
   }
 
   async update(id: string, dto: UpdateTurnDto): Promise<Turn> {
     const turn = await this.findOne(id);
-
     if (dto.startTime && dto.endTime && dto.startTime >= dto.endTime) {
       throw new BadRequestException('Start time must be before end time');
     }
-
     if (dto.capacity !== undefined && dto.capacity !== turn.capacity) {
       const reservedSpots = turn.capacity - turn.availableSpots;
       const newAvailableSpots = dto.capacity - reservedSpots;
-
       if (newAvailableSpots < 0) {
         throw new BadRequestException(
           `Cannot reduce capacity below current reservations (${reservedSpots} spots reserved)`,
         );
       }
-
       turn.availableSpots = newAvailableSpots;
     }
-
     Object.assign(turn, dto);
-
     return await this.turnRepository.save(turn);
   }
 
   async cancelTurn(id: string): Promise<Turn> {
     const turn = await this.findOne(id);
-
     if (turn.status === TurnStatus.cancelled) {
       throw new BadRequestException('Turn is already cancelled');
     }
-
     turn.status = TurnStatus.cancelled;
-
     return await this.turnRepository.save(turn);
   }
 
   async remove(id: string): Promise<{ message: string }> {
     const turn = await this.findOne(id);
-
     if (turn.reservations && turn.reservations.length > 0) {
       throw new BadRequestException(
         'Cannot delete turn with existing reservations. Cancel the turn instead.',
@@ -278,7 +253,6 @@ export class TurnsService {
     }
 
     await this.turnRepository.remove(turn);
-
     return {
       message: 'Turn deleted successfully',
     };
@@ -286,33 +260,25 @@ export class TurnsService {
 
   async decrementAvailableSpots(turnId: string): Promise<void> {
     const turn = await this.findOne(turnId);
-
     if (turn.availableSpots <= 0) {
       throw new BadRequestException('No available spots for this turn');
     }
-
     turn.availableSpots -= 1;
-
     if (turn.availableSpots === 0) {
       turn.status = TurnStatus.full;
     }
-
     await this.turnRepository.save(turn);
   }
 
   async incrementAvailableSpots(turnId: string): Promise<void> {
     const turn = await this.findOne(turnId);
-
     if (turn.availableSpots >= turn.capacity) {
       throw new BadRequestException('Turn is already at full capacity');
     }
-
     turn.availableSpots += 1;
-
     if (turn.status === TurnStatus.full) {
       turn.status = TurnStatus.available;
     }
-
     await this.turnRepository.save(turn);
   }
 
@@ -326,7 +292,6 @@ export class TurnsService {
       .where('turn.activityId = :activityId', { activityId })
       .andWhere('turn.status = :status', { status: TurnStatus.available })
       .andWhere('turn.availableSpots > 0');
-
     if (startDate) {
       queryBuilder.andWhere('turn.date >= :startDate', { startDate });
     } else {
@@ -334,11 +299,9 @@ export class TurnsService {
         today: new Date().toISOString().split('T')[0],
       });
     }
-
     queryBuilder
       .orderBy('turn.date', 'ASC')
       .addOrderBy('turn.startTime', 'ASC');
-
     return await queryBuilder.getMany();
   }
 }

@@ -15,6 +15,8 @@ import { SignupDto } from './dtos/singup.dto';
 import { UsersService } from 'src/modules/users/users.service';
 import { Genre } from 'src/common/enum/genre.enum';
 import { AuthProvider } from 'src/common/enum/authProvider.enum';
+import { MailService } from '../mail/mail.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -23,6 +25,8 @@ export class AuthService {
     private readonly usersRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
+    private readonly mailservice: MailService,
+    private readonly configService: ConfigService,
   ) {}
 
   async validateUser(email: string, password: string) {
@@ -92,12 +96,30 @@ export class AuthService {
 
       const { password, status, rol, provider, ...userResponse } = savedUser;
 
+      this.sendWelcomeEmailAsync(savedUser);
+
       return {
-        message: 'User create successfully',
+        message: 'User created successfully',
         user: userResponse,
       };
     } catch (error) {
       throw new InternalServerErrorException('Error creating the user');
+    }
+  }
+
+  private async sendWelcomeEmailAsync(user: User): Promise<void> {
+    try {
+      await this.mailservice.sendWelcomeEmail(user.email, {
+        userName: user.name,
+        userEmail: user.email,
+        userPhone: user.phone,
+        userDNI: user.dni.toString(),
+        frontendUrl:
+          this.configService.get<string>('FRONTEND_URL') ||
+          'http://localhost:3001',
+      });
+    } catch (error) {
+      console.error('Failed to send welcome email:', error);
     }
   }
 

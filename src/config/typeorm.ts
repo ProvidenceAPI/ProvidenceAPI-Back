@@ -35,7 +35,7 @@ export default registerAs('typeorm', () => {
     password: process.env.DB_PASSWORD,
     autoLoadEntities: true,
     synchronize: process.env.NODE_ENV !== 'production',
-    dropSchema: false, // 👈 false para NO borrar datos
+    dropSchema: false,
     logging: process.env.NODE_ENV === 'development',
   };
 });

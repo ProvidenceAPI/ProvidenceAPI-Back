@@ -19,7 +19,6 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
   ApiBody,
   ApiConsumes,
 } from '@nestjs/swagger';
@@ -37,13 +36,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('activities')
 export class ActivitiesController {
   constructor(private readonly activitiesService: ActivitiesService) {}
+
   @Get()
   @ApiOperation({ summary: 'Get all activities with optional filters' })
   @ApiResponse({
     status: 200,
     description: 'Activities retrieved successfully',
   })
-  @ApiQuery({ type: FilterActivityDto, required: false })
   findAll(@Query() filterDto: FilterActivityDto) {
     return this.activitiesService.findAll(filterDto);
   }

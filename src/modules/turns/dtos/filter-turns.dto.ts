@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsUUID, IsDateString, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { TurnStatus } from '../entities/turn.entity';
 
 export class FilterTurnsDto {
@@ -42,6 +42,6 @@ export class FilterTurnsDto {
     description: 'Filter only available turns (with spots)',
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => value === 'true' || value === true)
   onlyAvailable?: boolean;
 }

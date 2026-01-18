@@ -51,11 +51,11 @@ export class AuthController {
       properties: {
         email: {
           type: 'string',
-          example: 'user@email.com',
+          example: 'sofia.canon@gmail.com',
         },
         password: {
           type: 'string',
-          example: 'Password123*',
+          example: 'Contraseña123*',
         },
       },
       required: ['email', 'password'],
@@ -88,7 +88,6 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMe(@Req() req) {
-    console.log('👤 Usuario autenticado:', req.user);
     const user = await this.usersService.getUserById(req.user.id);
     return user;
   }

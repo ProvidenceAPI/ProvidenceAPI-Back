@@ -5,7 +5,6 @@ import {
   IsNumber,
   Min,
   IsOptional,
-  IsBoolean,
 } from 'class-validator';
 
 export class GenerateTurnsDto {

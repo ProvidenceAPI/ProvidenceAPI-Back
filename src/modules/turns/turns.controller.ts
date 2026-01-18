@@ -16,7 +16,6 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { TurnsService } from './turns.service';
 import { CreateTurnDto } from './dtos/create-turn.dto';
@@ -38,7 +37,6 @@ export class TurnsController {
     summary: 'Get all turns with optional filters (Public)',
   })
   @ApiResponse({ status: 200, description: 'Turns retrieved successfully' })
-  @ApiQuery({ type: FilterTurnsDto, required: false })
   findAll(@Query() filterDto: FilterTurnsDto) {
     return this.turnsService.findAll(filterDto);
   }
@@ -49,12 +47,6 @@ export class TurnsController {
   })
   @ApiResponse({ status: 200, description: 'Available turns retrieved' })
   @ApiResponse({ status: 404, description: 'Activity not found' })
-  @ApiQuery({
-    name: 'startDate',
-    required: false,
-    example: '2025-02-01',
-    description: 'Filter from this date (defaults to today)',
-  })
   getAvailableTurns(
     @Param('activityId', ParseUUIDPipe) activityId: string,
     @Query('startDate') startDate?: string,

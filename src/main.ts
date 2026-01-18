@@ -1,4 +1,5 @@
 import { config as dotenvConfig } from 'dotenv';
+import * as bodyParser from 'body-parser';
 
 dotenvConfig({
   path:
@@ -17,10 +18,13 @@ async function bootstrap() {
 
   app.enableCors({
     origin: [
-      'http://localhost:3001',
-      'http://localhost:3000',
-      process.env.FRONTEND_URL || 'http://localhost:3001',
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'https://www.mercadopago.com',
+      'https://www.mercadopago.com.ar',
+      'https://api.mercadopago.com',
+      'https://api.mercadolibre.com',
     ],
+
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -29,6 +33,8 @@ async function bootstrap() {
       'Accept',
       'Origin',
       'X-Requested-With',
+      'x-signature',
+      'x-request-id',
     ],
     exposedHeaders: ['Authorization'],
     preflightContinue: false,
@@ -58,11 +64,14 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || 3000;
+  app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({ extended: true }));
+
+  const port = process.env.PORT || 3001;
   await app.listen(port, '0.0.0.0');
 
   console.log(
-    `🚀 Application is running on: https://providenceapi-back.onrender.com:${port}`,
+    `🚀 Application is running on: https://providenceapi-back.onrender.com`,
   );
   console.log(
     `📚 Swagger documentation: https://providenceapi-back.onrender.com/api/docs`,
