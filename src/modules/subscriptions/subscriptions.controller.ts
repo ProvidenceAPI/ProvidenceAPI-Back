@@ -55,7 +55,6 @@ export class SubscriptionsController {
         req.user.id,
         activityId,
       );
-
     return {
       activityId,
       hasActiveSubscription: hasSubscription,

@@ -65,18 +65,22 @@ export class ReservationsService {
         turn.activityId,
       );
     if (!hasActiveSubscription) {
-      if (turn.isFreeTrial && turn.activity.hasFreeTrial) {
-        const hasUsedFreeTrial =
-          await this.subscriptionsService.hasUsedFreeTrial(userId);
-        if (hasUsedFreeTrial)
-          throw new ForbiddenException(
-            'You have already used your free trial. Subscribe to continue booking classes.',
-          );
-      } else {
+      if (!turn.isFreeTrial) {
         throw new ForbiddenException(
           'You need an active subscription to book this activity. Please subscribe first.',
         );
       }
+      if (!turn.activity.hasFreeTrial) {
+        throw new ForbiddenException(
+          'This activity does not offer free trials. Please subscribe first.',
+        );
+      }
+      const hasUsedFreeTrial =
+        await this.subscriptionsService.hasUsedFreeTrial(userId);
+      if (hasUsedFreeTrial)
+        throw new ForbiddenException(
+          'You have already used your free trial. Subscribe to continue booking classes.',
+        );
     }
     const now = new Date();
     const turnDate =
@@ -110,11 +114,10 @@ export class ReservationsService {
       turn,
       activity: turn.activity,
     });
-
     const savedReservation = await this.reservationRepo.save(reservation);
     await this.turnsService.decrementAvailableSpots(dto.turnId);
 
-    if (turn.isFreeTrial && !hasActiveSubscription) {
+    if (!hasActiveSubscription && turn.isFreeTrial) {
       await this.subscriptionsService.markFreeTrialAsUsed(
         userId,
         turn.activityId,
@@ -123,7 +126,6 @@ export class ReservationsService {
         `✅ User ${userId} used their free trial on activity ${turn.activityId}`,
       );
     }
-
     try {
       await this.mailService.sendReservationConfirmation(user.email, {
         userName: user.name,
@@ -158,11 +160,9 @@ export class ReservationsService {
     const isOwner = reservation.user.id === requester.id;
     const isAdmin =
       requester.rol === Rol.admin || requester.rol === Rol.superAdmin;
-
     if (!isOwner && !isAdmin) {
       throw new ForbiddenException('You cannot cancel this reservation');
     }
-
     if (isOwner && reservation.turn) {
       const now = new Date();
       const activityDate =
@@ -186,7 +186,6 @@ export class ReservationsService {
     if (reservation.turnId) {
       await this.turnsService.incrementAvailableSpots(reservation.turnId);
     }
-
     try {
       await this.mailService.sendReservationCancellation(
         reservation.user.email,
@@ -225,7 +224,6 @@ export class ReservationsService {
     if (turn.status === TurnStatus.cancelled) {
       throw new BadRequestException('Turn is already cancelled');
     }
-
     const activeReservations = await this.reservationRepo.find({
       where: {
         turnId: turnId,
@@ -233,7 +231,6 @@ export class ReservationsService {
       },
       relations: ['user', 'turn', 'turn.activity'],
     });
-
     for (const reservation of activeReservations) {
       reservation.status = ReservationStatus.cancelled;
     }
