@@ -35,7 +35,7 @@ export class NotificationsService {
 
     await this.mailService.sendAdminNotification(user.email, {
       title: notification.title,
-      message: notification.message,
+      message: notification.message || 'Sin mensaje',
       actionUrl: notification.actionUrl,
       actionText: notification.actionText || 'Ver más',
     });
@@ -95,13 +95,13 @@ export class NotificationsService {
 
   async sendPromotionNotification(promotionData: {
     title: string;
-    description: string;
+    message: string;
     discount?: string;
     validUntil?: string;
   }): Promise<void> {
     const notification: SendNotificationDto = {
       title: `🎁 ${promotionData.title}`,
-      message: `${promotionData.description}\n\n${promotionData.discount ? `💰 Descuento: ${promotionData.discount}` : ''}\n${promotionData.validUntil ? `⏰ Válido hasta: ${promotionData.validUntil}` : ''}`,
+      message: `${promotionData.message}\n\n${promotionData.discount ? `💰 Descuento: ${promotionData.discount}` : ''}\n${promotionData.validUntil ? `⏰ Válido hasta: ${promotionData.validUntil}` : ''}`,
       actionUrl: `${this.configService.get('FRONTEND_URL')}/activities`,
       actionText: 'Aprovechar Promoción',
     };
