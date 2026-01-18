@@ -1,5 +1,3 @@
-// src/modules/admin-notifications/admin-notifications.controller.ts
-
 import { Controller, Post, Get, Body, UseGuards, Query } from '@nestjs/common';
 import { AdminNotificationsService } from './admin-notifications.service';
 import { Rol } from '../../common/enum/roles.enum';
@@ -18,7 +16,6 @@ export class AdminNotificationsController {
     private readonly adminNotificationsService: AdminNotificationsService,
   ) {}
 
-  // 🎉 Notificar nueva actividad
   @Post('new-activity')
   @ApiOperation({ summary: 'Notify all users about a new activity' })
   async notifyNewActivity(
