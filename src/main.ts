@@ -64,7 +64,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  app.use('/api/payments/webhook', bodyParser.raw({ type: '*/*' }));
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
 
