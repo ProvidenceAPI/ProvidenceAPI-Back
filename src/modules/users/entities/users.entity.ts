@@ -76,6 +76,13 @@ export class User {
   })
   genre: Genre;
 
+  @ApiProperty({
+    example: false,
+    description: 'Whether the user has used their one-time free trial',
+  })
+  @Column({ type: 'boolean', default: false })
+  hasUsedFreeTrial: boolean;
+
   @ApiProperty({ enum: UserStatus })
   @Column({
     type: 'enum',

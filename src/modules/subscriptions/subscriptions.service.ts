@@ -46,24 +46,24 @@ export class SubscriptionsService {
   }
 
   async hasUsedFreeTrial(userId: string): Promise<boolean> {
-    const freeTrialUsage = await this.subscriptionRepository.findOne({
-      where: {
-        user: { id: userId },
-        isFreeTrial: true,
-      },
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
     });
-    return !!freeTrialUsage;
+    return user?.hasUsedFreeTrial || false;
   }
 
   async markFreeTrialAsUsed(userId: string, activityId: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
     const activity = await this.activityRepository.findOne({
       where: { id: activityId },
     });
-    if (!user || !activity)
-      throw new NotFoundException('User or Activity not found');
-    const alreadyUsed = await this.hasUsedFreeTrial(userId);
-    if (alreadyUsed) throw new BadRequestException('Free trial already used');
+    if (!activity) throw new NotFoundException('Activity not found');
+    if (user.hasUsedFreeTrial) {
+      throw new BadRequestException('Free trial already used');
+    }
+    user.hasUsedFreeTrial = true;
+    await this.userRepository.save(user);
 
     const freeTrialRecord = this.subscriptionRepository.create({
       user,
