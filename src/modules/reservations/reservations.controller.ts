@@ -32,7 +32,6 @@ export class ReservationsController {
   constructor(private readonly service: ReservationsService) {}
 
   @Get('me')
-  @Roles(Rol.user)
   @ApiOperation({ summary: 'Get my reservation history' })
   @ApiResponse({ status: 200, description: 'Reservation history' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
