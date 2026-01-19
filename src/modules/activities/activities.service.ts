@@ -11,7 +11,6 @@ import { CreateActivityDto } from './dtos/create-activity.dto';
 import { UpdateActivityDto } from './dtos/update-activity.dto';
 import { FilterActivityDto } from './dtos/filter-activity.dto';
 import { FileUploadService } from '../file-upload/file-upload.service';
-import { NotificationsService } from '../notifications/notifications.service';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
 import { UsersService } from '../users/users.service';
