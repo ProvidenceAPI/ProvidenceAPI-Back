@@ -40,6 +40,16 @@ export class ReservationsController {
     return this.service.getMyReservations(req.user.id);
   }
 
+  @Get()
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({ summary: 'Get all reservations (Admin/ SuperAdmin)' })
+  @ApiResponse({ status: 200, description: 'All reservations list' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden – Admin role required' })
+  getAllReservations() {
+    return this.service.getAllReservations();
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a reservation' })
   @ApiResponse({ status: 201, description: 'Reservation created successfully' })
@@ -98,15 +108,5 @@ export class ReservationsController {
     @Body('reason') reason?: string,
   ) {
     return this.service.cancelTurnAndNotifyUsers(turnId, reason);
-  }
-
-  @Get()
-  @Roles(Rol.admin, Rol.superAdmin)
-  @ApiOperation({ summary: 'Get all reservations (Admin)' })
-  @ApiResponse({ status: 200, description: 'All reservations list' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden – Admin role required' })
-  getAllReservations() {
-    return this.service.getAllReservations();
   }
 }
