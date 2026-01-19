@@ -38,9 +38,9 @@ export class Activity {
 
   @ApiProperty({
     example: 'Fede Dibello',
-    description: 'Trainer for the activity',
+    description: 'Trainer/instructor name',
   })
-  @Column({ type: 'varchar', length: 50, nullable: false })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   trainer: string;
 
   @ApiProperty({
