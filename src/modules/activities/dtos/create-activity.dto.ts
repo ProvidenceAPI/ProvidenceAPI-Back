@@ -26,6 +26,16 @@ export class CreateActivityDto {
   name: string;
 
   @ApiProperty({
+    example: 'Juan Pérez',
+    description: 'Nombre del entrenador/instructor',
+    required: false,
+  })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(100)
+  trainer: string;
+
+  @ApiProperty({
     example:
       'Clase de yoga para todos los niveles, enfocada en flexibilidad y relajación',
     description: 'Descripción detallada de la actividad',
