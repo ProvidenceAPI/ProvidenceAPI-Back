@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThan, MoreThan, Between } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Reservation } from '../reservations/entities/reservations.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { MailService } from '../mail/mail.service';
@@ -63,7 +63,9 @@ export class NotificationsSchedulerService {
             }),
             turnTime: reservation.startTime,
             location: 'Provincia de Buenos Aires 760',
-            frontendUrl: this.configService.get('FRONTEND_URL'),
+            frontendUrl:
+              this.configService.get<string>('FRONTEND_URL') ||
+              'http://localhost:3001',
           });
           sent++;
         } catch (error) {
@@ -87,16 +89,10 @@ export class NotificationsSchedulerService {
     name: 'payment-alerts',
     timeZone: 'America/Argentina/Buenos_Aires',
   })
-  sendPaymentAlerts() {
+  async sendPaymentAlerts() {
     this.logger.log('⏰ Starting payment alerts job...');
 
     try {
-      this.logger.warn(
-        '⚠️ Payment alerts disabled - Payment entity needs dueDate field',
-      );
-
-      /*
-      // Descomentar cuando Payment tenga dueDate
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(23, 59, 59, 999);
@@ -110,42 +106,56 @@ export class NotificationsSchedulerService {
           dueDate: Between(today, tomorrow),
         },
         relations: [
+          'user',
           'reservation',
-          'reservation.user',
           'reservation.turn',
           'reservation.turn.activity',
+          'activity',
         ],
       });
 
-      this.logger.log(`📧 Found ${pendingPayments.length} pending payments to alert`);
+      this.logger.log(
+        `📧 Found ${pendingPayments.length} pending payments to alert`,
+      );
 
       let sent = 0;
       let failed = 0;
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        'http://localhost:3001';
 
       for (const payment of pendingPayments) {
         try {
-          await this.mailService.sendPaymentAlert(
-            payment.reservation.user.email,
-            {
-              userName: payment.reservation.user.name,
-              activityName: payment.reservation.turn.activity.name,
-              amount: payment.amount,
-              dueDate: payment.dueDate.toLocaleDateString('es-ES'),
-              paymentUrl: `${this.configService.get('FRONTEND_URL')}/mis-pagos`,
-            },
-          );
+          const activityName =
+            payment.reservation?.turn?.activity?.name ??
+            payment.activity?.name ??
+            'Suscripción';
+
+          await this.mailService.sendPaymentAlert(payment.user.email, {
+            userName: payment.user.name,
+            activityName,
+            amount: Number(payment.amount),
+            dueDate: payment.dueDate!.toLocaleDateString('es-ES', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
+            paymentUrl: `${frontendUrl}/mis-pagos`,
+          });
           sent++;
-        } catch (error) {
+        } catch (error: any) {
           this.logger.error(
-            `Failed to send payment alert to ${payment.reservation.user.email}`,
-            error.message,
+            `Failed to send payment alert to ${payment.user.email}`,
+            error?.message ?? error,
           );
           failed++;
         }
       }
 
-      this.logger.log(`✅ Payment alerts completed - Sent: ${sent}, Failed: ${failed}`);
-      */
+      this.logger.log(
+        `✅ Payment alerts completed - Sent: ${sent}, Failed: ${failed}`,
+      );
     } catch (error) {
       this.logger.error('❌ Payment alerts job failed', error);
     }
@@ -183,7 +193,9 @@ export class NotificationsSchedulerService {
       turnDate: reservation.activityDate.toLocaleDateString('es-ES'),
       turnTime: reservation.startTime,
       location: 'Provincia de Buenos Aires 760',
-      frontendUrl: this.configService.get('FRONTEND_URL'),
+      frontendUrl:
+        this.configService.get<string>('FRONTEND_URL') ||
+        'http://localhost:3001',
     });
 
     this.logger.log(`✅ Test reminder sent to ${reservation.user.email}`);
