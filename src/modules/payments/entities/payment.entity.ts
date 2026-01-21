@@ -9,6 +9,7 @@ import {
 import { User } from 'src/modules/users/entities/users.entity';
 import { PaymentStatus } from 'src/common/enum/paymentStatus.enum';
 import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
+import { Activity } from 'src/modules/activities/entities/activity.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 @Entity('payments')
@@ -62,17 +63,26 @@ export class Payment {
   @CreateDateColumn()
   createdAt: Date;
 
+  @ApiProperty({
+    example: '2025-01-15T23:59:59.000Z',
+    required: false,
+    description: 'Fecha límite para realizar el pago (ej. para recordatorios)',
+  })
+  @Column({ type: 'timestamptz', nullable: true })
+  dueDate: Date | null;
+
   @ApiProperty({ type: () => User })
   @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'userId' })
   user: User;
 
   @ApiProperty({ type: () => Reservation })
-  @ManyToOne(() => Reservation, (reservation) => reservation.payments, {
-    eager: true,
-    nullable: true,
-  })
-  @ManyToOne(() => Reservation, { eager: true })
+  @ManyToOne(() => Reservation, { eager: true, nullable: true })
   @JoinColumn({ name: 'reservationId' })
   reservation: Reservation;
+
+  @ApiProperty({ type: () => Activity })
+  @ManyToOne(() => Activity, { nullable: true })
+  @JoinColumn({ name: 'activityId' })
+  activity: Activity | null;
 }

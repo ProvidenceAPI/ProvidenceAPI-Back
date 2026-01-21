@@ -267,6 +267,9 @@ export class ReservationsService {
             reason: reason || 'Cancelación administrativa del turno',
             refundInfo:
               'Puedes reprogramar tu clase sin costo adicional. Tu suscripción permanece activa y puedes elegir otro turno disponible.',
+            frontendUrl:
+              this.configService.get<string>('FRONTEND_URL') ||
+              'http://localhost:3001',
           },
         );
         emailsSent++;

@@ -42,11 +42,17 @@ export class PaymentsService {
     const activityName = activity.name;
     const activityId = activity.id;
     const reservationId = null;
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 3);
+    dueDate.setHours(23, 59, 59, 999);
+
     const payment = this.paymentRepository.create({
       amount: amount,
       user: { id: userId } as any,
       reservation: undefined,
       status: PaymentStatus.pending,
+      dueDate,
+      activity: { id: activity.id },
     });
     const savedPayment = await this.paymentRepository.save(payment);
     try {

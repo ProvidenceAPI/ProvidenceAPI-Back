@@ -31,11 +31,19 @@ export class MailService {
   }
 
   private async verifyConnection() {
+    const user = this.configService.get<string>('MAIL_USER');
+    const pass = this.configService.get<string>('MAIL_PASSWORD');
+    if (!user || !pass) {
+      this.logger.warn(
+        'Mail not configured (MAIL_USER/MAIL_PASSWORD). Skipping verification. Emails will not be sent.',
+      );
+      return;
+    }
     try {
       await this.transporter.verify();
       this.logger.log('✅ Mail server connection established');
-    } catch (error) {
-      this.logger.error('❌ Mail server connection failed:', error.message);
+    } catch (error: any) {
+      this.logger.error('❌ Mail server connection failed:', error?.message || error);
     }
   }
 
