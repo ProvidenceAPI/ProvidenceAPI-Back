@@ -17,7 +17,7 @@ export class ReservationsSchedulerService {
     private readonly configService: ConfigService,
   ) {}
 
-  @Cron('0 10 * * *', {
+  @Cron('0 8 * * *', {
     name: 'turn-reminders',
     timeZone: 'America/Argentina/Buenos_Aires',
   })

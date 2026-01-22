@@ -22,69 +22,6 @@ export class NotificationsSchedulerService {
     private readonly configService: ConfigService,
   ) {}
 
-  @Cron('0 10 * * *', {
-    name: 'turn-reminders',
-    timeZone: 'America/Argentina/Buenos_Aires',
-  })
-  async sendTurnReminders() {
-    this.logger.log('⏰ Starting turn reminders job...');
-
-    try {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-
-      const dayAfterTomorrow = new Date(tomorrow);
-      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
-
-      const reservations = await this.reservationRepo.find({
-        where: {
-          activityDate: Between(tomorrow, dayAfterTomorrow),
-          status: ReservationStatus.confirmed,
-        },
-        relations: ['user', 'turn', 'turn.activity'],
-      });
-
-      this.logger.log(`📧 Found ${reservations.length} reservations to remind`);
-
-      let sent = 0;
-      let failed = 0;
-
-      for (const reservation of reservations) {
-        try {
-          await this.mailService.sendTurnReminder(reservation.user.email, {
-            userName: reservation.user.name,
-            activityName: reservation.turn.activity.name,
-            turnDate: reservation.activityDate.toLocaleDateString('es-ES', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            }),
-            turnTime: reservation.startTime,
-            location: 'Provincia de Buenos Aires 760',
-            frontendUrl:
-              this.configService.get<string>('FRONTEND_URL') ||
-              'http://localhost:3001',
-          });
-          sent++;
-        } catch (error) {
-          this.logger.error(
-            `Failed to send reminder to ${reservation.user.email}`,
-            error.message,
-          );
-          failed++;
-        }
-      }
-
-      this.logger.log(
-        `✅ Turn reminders completed - Sent: ${sent}, Failed: ${failed}`,
-      );
-    } catch (error) {
-      this.logger.error('❌ Turn reminders job failed', error);
-    }
-  }
-
   @Cron('0 9 * * *', {
     name: 'payment-alerts',
     timeZone: 'America/Argentina/Buenos_Aires',
@@ -158,22 +95,6 @@ export class NotificationsSchedulerService {
       );
     } catch (error) {
       this.logger.error('❌ Payment alerts job failed', error);
-    }
-  }
-
-  @Cron('0 0 1 * *', {
-    name: 'cleanup-notifications',
-    timeZone: 'America/Argentina/Buenos_Aires',
-  })
-  async cleanupOldNotifications(): Promise<void> {
-    this.logger.log('🧹 Starting cleanup job...');
-
-    try {
-      await Promise.resolve();
-
-      this.logger.log('✅ Cleanup completed');
-    } catch (error) {
-      this.logger.error('❌ Cleanup job failed', error);
     }
   }
 
