@@ -56,10 +56,6 @@ export class PaymentsService {
     });
     const savedPayment = await this.paymentRepository.save(payment);
     try {
-      console.log(
-        'Webhook URL:',
-        `${this.configService.get('PUBLIC_API_URL')}/api/payments/webhook`,
-      );
       const preference = await this.mercadopagoService.createPreference({
         items: [
           {
@@ -97,7 +93,6 @@ export class PaymentsService {
         status: PaymentStatus.pending,
       };
     } catch (error) {
-      console.error('Error creating MercadoPago preference:', error);
       throw new InternalServerErrorException(
         'Error creating payment. Please try again.',
       );
@@ -114,7 +109,6 @@ export class PaymentsService {
           },
         });
         const orderData = await orderResponse.json();
-        console.log('Order data:', orderData);
         const payment = await this.paymentRepository.findOne({
           where: { mercadoPagoPreferenceId: orderData.preference_id },
           relations: ['user'],
@@ -126,7 +120,6 @@ export class PaymentsService {
           const paymentId = orderData.payments[0].id;
           const paymentData =
             await this.mercadopagoService.getPayment(paymentId);
-
           if (paymentData.status === 'approved') {
             await this.handleApprovedPayment(payment, paymentData);
           } else if (paymentData.status === 'rejected') {
@@ -143,7 +136,6 @@ export class PaymentsService {
       const paymentId = notification.data.id;
       const paymentData = await this.mercadopagoService.getPayment(paymentId);
       if (!paymentData) {
-        console.error('Payment data not found in MercadoPago');
         return { received: true, message: 'Payment not found' };
       }
       const metadata = paymentData.metadata || {};
@@ -167,7 +159,6 @@ export class PaymentsService {
       }
       return { received: true, status: paymentData.status };
     } catch (error) {
-      console.error('Error processing webhook:', error);
       return { received: true, error: error.message };
     }
   }

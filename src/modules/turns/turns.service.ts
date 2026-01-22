@@ -74,9 +74,6 @@ export class TurnsService {
         time: time,
       };
     });
-    console.log('📋 Activity schedule:', activity.schedule);
-    console.log('🗓️ Schedule slots parsed:', scheduleSlots);
-    console.log('📅 Day map used:', dayMap);
     while (currentDate <= endDate) {
       const dayOfWeek = currentDate.getDay();
       const slotsForToday = scheduleSlots.filter(
