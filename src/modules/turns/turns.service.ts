@@ -49,13 +49,22 @@ export class TurnsService {
     const turnsToCreate: Turn[] = [];
     const currentDate = new Date(startDate);
     const dayMap: { [key: string]: number } = {
+      Sunday: 0,
+      Monday: 1,
+      Tuesday: 2,
+      Wednedsay: 3,
+      Thursday: 4,
+      Friday: 5,
+      Saturday: 6,
       Domingo: 0,
       Lunes: 1,
       Martes: 2,
       Miércoles: 3,
+      Miercoles: 3,
       Jueves: 4,
       Viernes: 5,
       Sábado: 6,
+      Sabado: 6,
     };
 
     const scheduleSlots = activity.schedule.map((slot) => {
@@ -65,6 +74,9 @@ export class TurnsService {
         time: time,
       };
     });
+    console.log('📋 Activity schedule:', activity.schedule);
+    console.log('🗓️ Schedule slots parsed:', scheduleSlots);
+    console.log('📅 Day map used:', dayMap);
     while (currentDate <= endDate) {
       const dayOfWeek = currentDate.getDay();
       const slotsForToday = scheduleSlots.filter(
@@ -185,9 +197,18 @@ export class TurnsService {
         });
       }
       if (filterDto?.status && filterDto.onlyAvailable !== true) {
-        queryBuilder.andWhere('turn.status = :status', {
-          status: filterDto.status,
-        });
+        const statusMap: { [key: string]: TurnStatus } = {
+          available: TurnStatus.available,
+          full: TurnStatus.full,
+          cancelled: TurnStatus.cancelled,
+          completed: TurnStatus.completed,
+        };
+        const mappedStatus = statusMap[filterDto.status.toLowerCase()];
+        if (mappedStatus) {
+          queryBuilder.andWhere('turn.status = :status', {
+            status: mappedStatus,
+          });
+        }
       }
 
       if (filterDto?.onlyAvailable === true) {
