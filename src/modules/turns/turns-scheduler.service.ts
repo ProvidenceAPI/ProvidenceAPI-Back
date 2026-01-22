@@ -13,7 +13,8 @@ export class TurnsSchedulerService {
     private readonly turnRepository: Repository<Turn>,
   ) {}
 
-  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  // Cron jobs desactivados - se mantienen los métodos por si se necesitan manualmente
+  // @Cron(CronExpression.EVERY_DAY_AT_2AM)
   async markPastTurnsAsCompleted() {
     this.logger.log('Starting job: Mark past turns as completed');
 
@@ -37,7 +38,7 @@ export class TurnsSchedulerService {
     }
   }
 
-  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
+  // @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
   async deleteOldCompletedTurns() {
     this.logger.log('Starting job: Delete old completed turns');
 
