@@ -7,6 +7,7 @@ import {
   UseGuards,
   Get,
   Res,
+  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -39,6 +40,14 @@ export class AuthController {
   })
   async signup(@Body() user: SignupDto) {
     return this.authService.createUser(user);
+  }
+
+  @Get('check-email/:email')
+  @ApiOperation({ summary: 'Check if email is already registered' })
+  @ApiResponse({ status: 200, description: 'Email availability checked' })
+  async checkEmail(@Param('email') email: string) {
+    const user = await this.usersService.findByEmail(email);
+    return { exists: !!user };
   }
 
   @UseGuards(AuthGuard('local'))
