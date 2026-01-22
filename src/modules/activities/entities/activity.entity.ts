@@ -100,7 +100,8 @@ export class Activity {
   schedule: string[];
 
   @ApiProperty({
-    example: 'https://example.com/images/yoga-class.jpg',
+    example:
+      'https://res.cloudinary.com/ds4vplktr/image/upload/v1768177288/profiles/rrl49oub36ljnyt67y69.jpg',
     description: 'Image URL representing the activity',
   })
   @Column({ type: 'varchar', nullable: true })
