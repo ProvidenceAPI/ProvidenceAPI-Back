@@ -211,10 +211,7 @@ export class AdminNotificationsService {
 
       // Obtener administradores
       const admins = await this.usersRepository.find({
-        where: [
-          { rol: Rol.admin },
-          { rol: Rol.superAdmin },
-        ],
+        where: [{ rol: Rol.admin }, { rol: Rol.superAdmin }],
       });
 
       if (admins.length === 0) {
@@ -250,14 +247,18 @@ export class AdminNotificationsService {
       const approvedPayments = await this.paymentRepository
         .createQueryBuilder('payment')
         .where('payment.createdAt >= :oneWeekAgo', { oneWeekAgo })
-        .andWhere('payment.status = :status', { status: PaymentStatus.approved })
+        .andWhere('payment.status = :status', {
+          status: PaymentStatus.approved,
+        })
         .getCount();
 
       const totalRevenue = await this.paymentRepository
         .createQueryBuilder('payment')
         .select('SUM(payment.amount)', 'total')
         .where('payment.createdAt >= :oneWeekAgo', { oneWeekAgo })
-        .andWhere('payment.status = :status', { status: PaymentStatus.approved })
+        .andWhere('payment.status = :status', {
+          status: PaymentStatus.approved,
+        })
         .getRawOne();
 
       const newSubscriptions = await this.subscriptionRepository.count({
