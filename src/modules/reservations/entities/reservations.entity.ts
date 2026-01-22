@@ -35,6 +35,13 @@ export class Reservation {
   @Column({ type: 'time' })
   endTime: string;
 
+  @ApiProperty({
+    example: false,
+    description: 'Indicates if this reservation used the free trial',
+  })
+  @Column({ type: 'boolean', default: false })
+  isFreeTrial: boolean;
+
   @ApiProperty({ enum: ReservationStatus })
   @Column({
     type: 'enum',
