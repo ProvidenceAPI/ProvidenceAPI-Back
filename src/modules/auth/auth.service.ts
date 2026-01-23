@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/users.entity';
@@ -20,6 +21,8 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -96,7 +99,16 @@ export class AuthService {
 
       const { password, status, rol, provider, ...userResponse } = savedUser;
 
-      this.sendWelcomeEmailAsync(savedUser);
+      // Enviar correo de bienvenida de forma asíncrona (no bloquea el registro)
+      this.sendWelcomeEmailAsync(savedUser).catch((error) => {
+        // El error ya se loggea en sendWelcomeEmailAsync, pero lo registramos aquí también
+        this.logger.error(
+          `Failed to send welcome email to ${savedUser.email} after user creation`,
+          error?.stack || error,
+        );
+      });
+
+      this.logger.log(`✅ User created successfully: ${savedUser.email}`);
 
       return {
         message: 'User created successfully',
@@ -108,7 +120,20 @@ export class AuthService {
   }
 
   private async sendWelcomeEmailAsync(user: User): Promise<void> {
+    // Verificar si el mail está configurado
+    const mailUser = this.configService.get<string>('MAIL_USER');
+    const mailPassword = this.configService.get<string>('MAIL_PASSWORD');
+
+    if (!mailUser || !mailPassword) {
+      this.logger.warn(
+        `⚠️ Mail not configured (MAIL_USER/MAIL_PASSWORD missing). Welcome email NOT sent to ${user.email}`,
+      );
+      return;
+    }
+
     try {
+      this.logger.log(`📧 Attempting to send welcome email to ${user.email}`);
+      
       await this.mailservice.sendWelcomeEmail(user.email, {
         userName: user.name,
         userEmail: user.email,
@@ -118,8 +143,15 @@ export class AuthService {
           this.configService.get<string>('FRONTEND_URL') ||
           'http://localhost:3001',
       });
-    } catch (error) {
-      console.error('Failed to send welcome email:', error);
+
+      this.logger.log(`✅ Welcome email sent successfully to ${user.email}`);
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed to send welcome email to ${user.email}:`,
+        error?.message || error,
+      );
+      this.logger.error(`Error details:`, error?.stack || error);
+      // No lanzamos el error para no bloquear el registro del usuario
     }
   }
 
