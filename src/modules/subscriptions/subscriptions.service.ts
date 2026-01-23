@@ -182,14 +182,7 @@ export class SubscriptionsService {
     subscription.payment = { id: paymentId } as Payment;
     return await this.subscriptionRepository.save(subscription);
   }
-  /**
-   * Job automático: Expira suscripciones vencidas
-   * Se ejecuta todos los días a medianoche
-   * Obtiene suscripciones próximas a vencer (últimos 3 días)
-   */
-  /**
-   * Job: Envía recordatorios de renovación
-   */
+
   async getExpiringSubscriptions(): Promise<Subscription[]> {
     const now = new Date();
     const threeDaysFromNow = new Date();

@@ -6,7 +6,6 @@ import { Reservation } from '../reservations/entities/reservations.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { MailService } from '../mail/mail.service';
 import { ConfigService } from '@nestjs/config';
-import { ReservationStatus } from 'src/common/enum/reservations.enum';
 import { PaymentStatus } from 'src/common/enum/paymentStatus.enum';
 
 @Injectable()

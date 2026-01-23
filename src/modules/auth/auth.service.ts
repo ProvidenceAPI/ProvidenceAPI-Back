@@ -99,9 +99,7 @@ export class AuthService {
 
       const { password, status, rol, provider, ...userResponse } = savedUser;
 
-      // Enviar correo de bienvenida de forma asíncrona (no bloquea el registro)
       this.sendWelcomeEmailAsync(savedUser).catch((error) => {
-        // El error ya se loggea en sendWelcomeEmailAsync, pero lo registramos aquí también
         this.logger.error(
           `Failed to send welcome email to ${savedUser.email} after user creation`,
           error?.stack || error,
@@ -120,7 +118,6 @@ export class AuthService {
   }
 
   private async sendWelcomeEmailAsync(user: User): Promise<void> {
-    // Verificar si el mail está configurado
     const mailUser = this.configService.get<string>('MAIL_USER');
     const mailPassword = this.configService.get<string>('MAIL_PASSWORD');
 
@@ -133,7 +130,7 @@ export class AuthService {
 
     try {
       this.logger.log(`📧 Attempting to send welcome email to ${user.email}`);
-      
+
       await this.mailservice.sendWelcomeEmail(user.email, {
         userName: user.name,
         userEmail: user.email,
@@ -151,7 +148,6 @@ export class AuthService {
         error?.message || error,
       );
       this.logger.error(`Error details:`, error?.stack || error);
-      // No lanzamos el error para no bloquear el registro del usuario
     }
   }
 

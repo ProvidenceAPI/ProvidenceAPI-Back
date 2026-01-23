@@ -146,15 +146,13 @@ export class ReservationsService {
       );
     }
     try {
-      // Asegurar que turn.date sea un Date antes de formatear
-      const turnDate = turn.date instanceof Date 
-        ? turn.date 
-        : new Date(turn.date);
-      
+      const turnDate =
+        turn.date instanceof Date ? turn.date : new Date(turn.date);
+
       this.logger.log(
         `📧 Enviando correo de confirmación de reserva a ${user.email} para actividad ${turn.activity.name}`,
       );
-      
+
       await this.mailService.sendReservationConfirmation(user.email, {
         userName: user.name,
         activityName: turn.activity.name,
@@ -172,7 +170,7 @@ export class ReservationsService {
           this.configService.get<string>('FRONTEND_URL') ||
           'http://localhost:3001',
       });
-      
+
       this.logger.log(
         `✅ Correo de confirmación enviado exitosamente a ${user.email}`,
       );
@@ -182,7 +180,6 @@ export class ReservationsService {
         error?.message || error,
         error?.stack,
       );
-      // No lanzamos el error para que la reserva se cree aunque falle el correo
     }
     return savedReservation;
   }
@@ -230,9 +227,10 @@ export class ReservationsService {
     }
 
     try {
-      const activityDate = reservation.activityDate instanceof Date
-        ? reservation.activityDate
-        : new Date(reservation.activityDate);
+      const activityDate =
+        reservation.activityDate instanceof Date
+          ? reservation.activityDate
+          : new Date(reservation.activityDate);
 
       this.logger.log(
         `📧 Enviando correo de cancelación de reserva a ${reservation.user.email}`,
@@ -302,9 +300,10 @@ export class ReservationsService {
 
     for (const reservation of activeReservations) {
       try {
-        const activityDate = reservation.activityDate instanceof Date
-          ? reservation.activityDate
-          : new Date(reservation.activityDate);
+        const activityDate =
+          reservation.activityDate instanceof Date
+            ? reservation.activityDate
+            : new Date(reservation.activityDate);
 
         this.logger.log(
           `📧 Enviando notificación de turno cancelado a ${reservation.user.email}`,
@@ -485,7 +484,9 @@ export class ReservationsService {
       throw new NotFoundException('Reservation not found');
     }
 
-    const newUser = await this.userRepository.findOne({ where: { id: userId } });
+    const newUser = await this.userRepository.findOne({
+      where: { id: userId },
+    });
     if (!newUser) {
       throw new NotFoundException('User not found');
     }
@@ -495,10 +496,11 @@ export class ReservationsService {
     }
 
     if (newUser.status === UserStatus.cancelled) {
-      throw new ForbiddenException('Cannot assign reservation to cancelled user');
+      throw new ForbiddenException(
+        'Cannot assign reservation to cancelled user',
+      );
     }
 
-    // Verificar que el nuevo usuario no tenga ya una reserva para este turno
     const existingReservation = await this.reservationRepo.findOne({
       where: {
         turnId: reservation.turnId,
@@ -518,16 +520,16 @@ export class ReservationsService {
 
     const updatedReservation = await this.reservationRepo.save(reservation);
 
-    // Enviar email de confirmación al nuevo usuario
     try {
-      const activityDate = reservation.activityDate instanceof Date
-        ? reservation.activityDate
-        : new Date(reservation.activityDate);
-      
+      const activityDate =
+        reservation.activityDate instanceof Date
+          ? reservation.activityDate
+          : new Date(reservation.activityDate);
+
       this.logger.log(
         `📧 Enviando correo de confirmación de reserva reasignada a ${newUser.email}`,
       );
-      
+
       await this.mailService.sendReservationConfirmation(newUser.email, {
         userName: newUser.name,
         activityName: reservation.turn.activity.name,
@@ -545,7 +547,7 @@ export class ReservationsService {
           this.configService.get<string>('FRONTEND_URL') ||
           'http://localhost:3001',
       });
-      
+
       this.logger.log(
         `✅ Correo de confirmación enviado exitosamente a ${newUser.email}`,
       );
@@ -557,17 +559,17 @@ export class ReservationsService {
       );
     }
 
-    // Notificar al usuario anterior si es diferente
     if (oldUser.id !== newUser.id) {
       try {
-        const activityDate = reservation.activityDate instanceof Date
-          ? reservation.activityDate
-          : new Date(reservation.activityDate);
-        
+        const activityDate =
+          reservation.activityDate instanceof Date
+            ? reservation.activityDate
+            : new Date(reservation.activityDate);
+
         this.logger.log(
           `📧 Enviando correo de cancelación de reserva reasignada a ${oldUser.email}`,
         );
-        
+
         await this.mailService.sendReservationCancellation(oldUser.email, {
           userName: oldUser.name,
           activityName: reservation.turn.activity.name,
@@ -585,7 +587,7 @@ export class ReservationsService {
             this.configService.get<string>('FRONTEND_URL') ||
             'http://localhost:3001',
         });
-        
+
         this.logger.log(
           `✅ Correo de cancelación enviado exitosamente a ${oldUser.email}`,
         );
@@ -615,28 +617,33 @@ export class ReservationsService {
     }
 
     if (reservation.status === ReservationStatus.cancelled) {
-      throw new BadRequestException('Cannot change turn of a cancelled reservation');
+      throw new BadRequestException(
+        'Cannot change turn of a cancelled reservation',
+      );
     }
 
     const newTurn = await this.turnsService.findOne(newTurnId);
-    
+
     if (!newTurn) {
       throw new NotFoundException('Turn not found');
     }
 
     if (newTurn.status === TurnStatus.cancelled) {
-      throw new BadRequestException('Cannot assign reservation to a cancelled turn');
+      throw new BadRequestException(
+        'Cannot assign reservation to a cancelled turn',
+      );
     }
 
     if (newTurn.status === TurnStatus.completed) {
-      throw new BadRequestException('Cannot assign reservation to a completed turn');
+      throw new BadRequestException(
+        'Cannot assign reservation to a completed turn',
+      );
     }
 
     if (newTurn.availableSpots <= 0) {
       throw new BadRequestException('No available spots for this turn');
     }
 
-    // Verificar que el usuario no tenga ya una reserva para este nuevo turno
     const existingReservation = await this.reservationRepo.findOne({
       where: {
         turnId: newTurnId,
@@ -652,59 +659,57 @@ export class ReservationsService {
     }
 
     const oldTurn = reservation.turn;
-    const oldActivityName = oldTurn?.activity?.name || reservation.activity?.name || 'Actividad anterior';
+    const oldActivityName =
+      oldTurn?.activity?.name ||
+      reservation.activity?.name ||
+      'Actividad anterior';
 
-    // Liberar el cupo del turno anterior
     if (oldTurn) {
       await this.turnsService.incrementAvailableSpots(oldTurn.id);
     }
 
-    // Actualizar la reserva con el nuevo turno
     reservation.turnId = newTurnId;
     reservation.turn = newTurn;
     reservation.activityId = newTurn.activityId;
-    // Asegurar que activityDate sea un Date
+
     reservation.activityDate =
-      newTurn.date instanceof Date
-        ? newTurn.date
-        : new Date(newTurn.date);
+      newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
     reservation.startTime = newTurn.startTime;
     reservation.endTime = newTurn.endTime;
 
-    // Reservar el cupo en el nuevo turno
     await this.turnsService.decrementAvailableSpots(newTurnId);
 
     const updatedReservation = await this.reservationRepo.save(reservation);
 
-    // Enviar email de confirmación con la nueva actividad
     try {
       const newTurnDate =
-        newTurn.date instanceof Date
-          ? newTurn.date
-          : new Date(newTurn.date);
-      
+        newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
+
       this.logger.log(
         `📧 Enviando correo de confirmación de cambio de turno a ${reservation.user.email}`,
       );
-      
-      await this.mailService.sendReservationConfirmation(reservation.user.email, {
-        userName: reservation.user.name,
-        activityName: newTurn.activity.name,
-        turnDate: newTurnDate.toLocaleDateString('es-ES', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
-        turnTime: newTurn.startTime,
-        endTime: newTurn.endTime,
-        instructor: 'Por asignar',
-        location: 'Provincia de Buenos Aires 760',
-        frontendUrl:
-          this.configService.get<string>('FRONTEND_URL') ||
-          'http://localhost:3001',
-      });
-      
+
+      await this.mailService.sendReservationConfirmation(
+        reservation.user.email,
+        {
+          userName: reservation.user.name,
+          activityName: newTurn.activity.name,
+          turnDate: newTurnDate.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          turnTime: newTurn.startTime,
+          endTime: newTurn.endTime,
+          instructor: 'Por asignar',
+          location: 'Provincia de Buenos Aires 760',
+          frontendUrl:
+            this.configService.get<string>('FRONTEND_URL') ||
+            'http://localhost:3001',
+        },
+      );
+
       this.logger.log(
         `✅ Correo de confirmación de cambio de turno enviado exitosamente a ${reservation.user.email}`,
       );
@@ -716,7 +721,6 @@ export class ReservationsService {
       );
     }
 
-    // Enviar email de cancelación para la actividad anterior
     try {
       const oldTurnDate = oldTurn?.date
         ? oldTurn.date instanceof Date
@@ -725,29 +729,32 @@ export class ReservationsService {
         : reservation.activityDate instanceof Date
           ? reservation.activityDate
           : new Date(reservation.activityDate);
-      
+
       this.logger.log(
         `📧 Enviando correo de cancelación de turno anterior a ${reservation.user.email}`,
       );
-      
-      await this.mailService.sendReservationCancellation(reservation.user.email, {
-        userName: reservation.user.name,
-        activityName: oldActivityName,
-        turnDate: oldTurnDate.toLocaleDateString('es-ES', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        }),
-        turnTime: oldTurn?.startTime || reservation.startTime,
-        reason: 'Reserva reasignada a otra actividad por el administrador',
-        refundInfo:
-          'Tu reserva ha sido reasignada a otra actividad. Revisa tu email para ver los nuevos detalles.',
-        frontendUrl:
-          this.configService.get<string>('FRONTEND_URL') ||
-          'http://localhost:3001',
-      });
-      
+
+      await this.mailService.sendReservationCancellation(
+        reservation.user.email,
+        {
+          userName: reservation.user.name,
+          activityName: oldActivityName,
+          turnDate: oldTurnDate.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          turnTime: oldTurn?.startTime || reservation.startTime,
+          reason: 'Reserva reasignada a otra actividad por el administrador',
+          refundInfo:
+            'Tu reserva ha sido reasignada a otra actividad. Revisa tu email para ver los nuevos detalles.',
+          frontendUrl:
+            this.configService.get<string>('FRONTEND_URL') ||
+            'http://localhost:3001',
+        },
+      );
+
       this.logger.log(
         `✅ Correo de cancelación de turno anterior enviado exitosamente a ${reservation.user.email}`,
       );
