@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Subscription } from './entities/subscriptions.entity';
-import { Repository } from 'typeorm';
+import { Between, MoreThanOrEqual, Repository } from 'typeorm';
 import { User } from '../users/entities/users.entity';
 import { Activity } from '../activities/entities/activity.entity';
 import { SubscriptionStatus } from 'src/common/enum/subscriptionStatus.enum';
@@ -99,10 +99,8 @@ export class SubscriptionsService {
       },
       order: { createdAt: 'DESC' },
     });
-
     return subscriptions.map((sub) => this.mapToResponseDto(sub));
   }
-
   async createSubscription(
     userId: string,
     activityId: string,
@@ -111,12 +109,10 @@ export class SubscriptionsService {
   ) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
-
     const activity = await this.activityRepository.findOne({
       where: { id: activityId },
     });
     if (!activity) throw new NotFoundException('Activity not found');
-
     const hasActiveSubscription = await this.checkSubscriptionStatus(
       userId,
       activityId,
@@ -164,12 +160,10 @@ export class SubscriptionsService {
       order: { createdAt: 'DESC' },
     });
     if (!subscription) throw new NotFoundException('Subscription not found');
-
     const activity = await this.activityRepository.findOne({
       where: { id: activityId },
     });
     if (!activity) throw new NotFoundException('Activity not found');
-
     const now = new Date();
     let newExpirationDate: Date;
     if (
@@ -186,7 +180,6 @@ export class SubscriptionsService {
     subscription.status = SubscriptionStatus.active;
     subscription.monthlyPrice = activity?.price;
     subscription.payment = { id: paymentId } as Payment;
-
     return await this.subscriptionRepository.save(subscription);
   }
   /**
@@ -201,7 +194,6 @@ export class SubscriptionsService {
     const now = new Date();
     const threeDaysFromNow = new Date();
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
-
     return await this.subscriptionRepository
       .createQueryBuilder('subscription')
       .leftJoinAndSelect('subscription.user', 'user')
@@ -217,7 +209,6 @@ export class SubscriptionsService {
   }
 
   async getSubscriptionStats() {
-    // Para obtener estadísticas de suscripciones (SuperAdmin)
     const [active, expired, cancelled, total, freeTrialUsed] =
       await Promise.all([
         this.subscriptionRepository.count({
@@ -236,14 +227,12 @@ export class SubscriptionsService {
       ]);
     return { active, expired, cancelled, total, freeTrialUsed };
   }
-
   private mapToResponseDto(subscription: Subscription) {
     const now = new Date();
     const daysRemaining = Math.ceil(
       (subscription.expirationDate.getTime() - now.getTime()) /
         (1000 * 60 * 60 * 24),
     );
-
     return {
       id: subscription.id,
       startDate: subscription.startDate,
@@ -259,5 +248,47 @@ export class SubscriptionsService {
       },
       daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
     };
+  }
+
+  async getSubscriptionMetrics() {
+    const now = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const [total, active, expired, expiringSoon, expiredRecently] =
+      await Promise.all([
+        this.subscriptionRepository.count(),
+        this.subscriptionRepository.count({
+          where: { status: SubscriptionStatus.active },
+        }),
+        this.subscriptionRepository.count({
+          where: { status: SubscriptionStatus.expired },
+        }),
+        this.subscriptionRepository.count({
+          where: {
+            status: SubscriptionStatus.active,
+            expirationDate: Between(now, sevenDaysFromNow),
+          },
+        }),
+        this.subscriptionRepository.count({
+          where: {
+            status: SubscriptionStatus.expired,
+            expirationDate: MoreThanOrEqual(thirtyDaysAgo),
+          },
+        }),
+      ]);
+    const retentionRate =
+      total > 0 ? parseFloat(((active / total) * 100).toFixed(2)) : 0;
+    const result = {
+      total,
+      active,
+      expired,
+      expiringSoon,
+      expiredRecently,
+      retentionRate,
+      expirationRate: parseFloat((100 - retentionRate).toFixed(2)),
+    };
+    return result;
   }
 }

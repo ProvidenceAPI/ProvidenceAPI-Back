@@ -58,7 +58,21 @@ export class ReservationsService {
       throw new BadRequestException('This turn has already occurred');
     if (turn.availableSpots <= 0)
       throw new BadRequestException('No available spots for this turn');
-
+    const now = new Date();
+    const turnDate =
+      turn.date instanceof Date
+        ? turn.date.toISOString().split('T')[0]
+        : turn.date;
+    const turnDateTime = new Date(`${turnDate}T${turn.startTime}`);
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    if (turnDateTime < oneHourFromNow) {
+      const minutesRemaining = Math.floor(
+        (turnDateTime.getTime() - now.getTime()) / (60 * 1000),
+      );
+      throw new BadRequestException(
+        `Debes reservar con al menos 1 hora de anticipación. Este turno comienza en ${minutesRemaining} minutos.`,
+      );
+    }
     const hasActiveSubscription =
       await this.subscriptionsService.checkSubscriptionStatus(
         userId,
@@ -82,15 +96,6 @@ export class ReservationsService {
           'You have already used your free trial. Subscribe to continue booking classes.',
         );
     }
-    const now = new Date();
-    const turnDate =
-      turn.date instanceof Date
-        ? turn.date.toISOString().split('T')[0]
-        : turn.date;
-    const turnDateTime = new Date(`${turnDate}T${turn.startTime}`);
-    if (turnDateTime < now)
-      throw new BadRequestException('Cannot reserve past turns');
-
     const reservationDate = turnDate;
     const existingReservationSameDay = await this.reservationRepo.findOne({
       where: {
@@ -117,7 +122,6 @@ export class ReservationsService {
       throw new ConflictException(
         'You already have a reservation for this turn',
       );
-
     const reservation = this.reservationRepo.create({
       activityDate: turn.date,
       startTime: turn.startTime,
@@ -125,20 +129,17 @@ export class ReservationsService {
       userId: user.id,
       turnId: dto.turnId,
       activityId: turn.activityId,
+      isFreeTrial: !hasActiveSubscription && turn.isFreeTrial,
       user,
       turn,
       activity: turn.activity,
     });
     const savedReservation = await this.reservationRepo.save(reservation);
     await this.turnsService.decrementAvailableSpots(dto.turnId);
-
     if (!hasActiveSubscription && turn.isFreeTrial) {
       await this.subscriptionsService.markFreeTrialAsUsed(
         userId,
         turn.activityId,
-      );
-      console.log(
-        `✅ User ${userId} used their free trial on activity ${turn.activityId}`,
       );
     }
     try {
@@ -281,9 +282,6 @@ export class ReservationsService {
         emailsFailed++;
       }
     }
-    console.log(
-      `Turn ${turnId} cancelled. Emails sent: ${emailsSent}, failed: ${emailsFailed}`,
-    );
     return {
       message: `Turn cancelled successfully. ${activeReservations.length} users were notified (${emailsSent} emails sent, ${emailsFailed} failed).`,
       reservationsCancelled: activeReservations.length,
@@ -332,5 +330,83 @@ export class ReservationsService {
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
     return reservation;
+  }
+
+  async getReservationCancellationRate() {
+    const [total, cancelled, completed] = await Promise.all([
+      this.reservationRepo.count(),
+      this.reservationRepo.count({
+        where: { status: ReservationStatus.cancelled },
+      }),
+      this.reservationRepo.count({
+        where: { status: ReservationStatus.completed },
+      }),
+    ]);
+    const cancellationRate =
+      total > 0 ? parseFloat(((cancelled / total) * 100).toFixed(2)) : 0;
+    const completionRate =
+      total > 0 ? parseFloat(((completed / total) * 100).toFixed(2)) : 0;
+    return {
+      total,
+      cancelled,
+      completed,
+      cancellationRate,
+      completionRate,
+    };
+  }
+
+  async getActivityAttendanceStats() {
+    const attendanceByActivity = await this.reservationRepo
+      .createQueryBuilder('res')
+      .select('activity.id', 'activityId')
+      .addSelect('activity.name', 'activityName')
+      .addSelect(
+        'COUNT(CASE WHEN res.status = :completed THEN 1 END)',
+        'completed',
+      )
+      .addSelect(
+        'COUNT(CASE WHEN res.status = :cancelled THEN 1 END)',
+        'cancelled',
+      )
+      .addSelect('COUNT(*)', 'total')
+      .leftJoin('res.activity', 'activity')
+      .setParameter('completed', ReservationStatus.completed)
+      .setParameter('cancelled', ReservationStatus.cancelled)
+      .groupBy('activity.id')
+      .addGroupBy('activity.name')
+      .getRawMany();
+
+    return attendanceByActivity.map((item) => ({
+      activityId: item.activityId,
+      activityName: item.activityName,
+      totalReservations: parseInt(item.total),
+      completed: parseInt(item.completed),
+      cancelled: parseInt(item.cancelled),
+      attendanceRate:
+        item.total > 0
+          ? parseFloat(((item.completed / item.total) * 100).toFixed(2))
+          : 0,
+    }));
+  }
+
+  async getPeakHours() {
+    const peakHours = await this.reservationRepo
+      .createQueryBuilder('res')
+      .select('res.startTime', 'hour')
+      .addSelect('COUNT(res.id)', 'count')
+      .where('res.status = :confirmed', {
+        confirmed: ReservationStatus.confirmed,
+      })
+      .orWhere('res.status = :completed', {
+        completed: ReservationStatus.completed,
+      })
+      .groupBy('res.startTime')
+      .orderBy('count', 'DESC')
+      .limit(5)
+      .getRawMany();
+    return peakHours.map((item) => ({
+      hour: item.hour,
+      reservations: parseInt(item.count),
+    }));
   }
 }

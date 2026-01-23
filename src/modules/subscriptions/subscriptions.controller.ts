@@ -80,4 +80,14 @@ export class SubscriptionsController {
   getExpiringSubscriptions() {
     return this.userActivitiesService.getExpiringSubscriptions();
   }
+
+  @Get('admin/metrics')
+  @UseGuards(RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({ summary: 'Get subscription metrics (Admin)' })
+  @ApiResponse({ status: 200, description: 'Subscription metrics' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  getSubscriptionMetrics() {
+    return this.userActivitiesService.getSubscriptionMetrics();
+  }
 }

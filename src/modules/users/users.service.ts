@@ -199,4 +199,21 @@ export class UsersService {
     const { password, ...userWithoutPassword } = savedUser;
     return userWithoutPassword;
   }
+
+  async getUserStats() {
+    const [total, active, inactive, banned] = await Promise.all([
+      this.userRepository.count(),
+      this.userRepository.count({
+        where: { status: UserStatus.active },
+      }),
+      this.userRepository.count({
+        where: { status: UserStatus.cancelled },
+      }),
+      this.userRepository.count({
+        where: { status: UserStatus.banned },
+      }),
+    ]);
+
+    return { total, active, inactive, banned };
+  }
 }
