@@ -331,4 +331,82 @@ export class ReservationsService {
     if (!reservation) throw new NotFoundException('Reservation not found');
     return reservation;
   }
+
+  async getReservationCancellationRate() {
+    const [total, cancelled, completed] = await Promise.all([
+      this.reservationRepo.count(),
+      this.reservationRepo.count({
+        where: { status: ReservationStatus.cancelled },
+      }),
+      this.reservationRepo.count({
+        where: { status: ReservationStatus.completed },
+      }),
+    ]);
+    const cancellationRate =
+      total > 0 ? parseFloat(((cancelled / total) * 100).toFixed(2)) : 0;
+    const completionRate =
+      total > 0 ? parseFloat(((completed / total) * 100).toFixed(2)) : 0;
+    return {
+      total,
+      cancelled,
+      completed,
+      cancellationRate,
+      completionRate,
+    };
+  }
+
+  async getActivityAttendanceStats() {
+    const attendanceByActivity = await this.reservationRepo
+      .createQueryBuilder('res')
+      .select('activity.id', 'activityId')
+      .addSelect('activity.name', 'activityName')
+      .addSelect(
+        'COUNT(CASE WHEN res.status = :completed THEN 1 END)',
+        'completed',
+      )
+      .addSelect(
+        'COUNT(CASE WHEN res.status = :cancelled THEN 1 END)',
+        'cancelled',
+      )
+      .addSelect('COUNT(*)', 'total')
+      .leftJoin('res.activity', 'activity')
+      .setParameter('completed', ReservationStatus.completed)
+      .setParameter('cancelled', ReservationStatus.cancelled)
+      .groupBy('activity.id')
+      .addGroupBy('activity.name')
+      .getRawMany();
+
+    return attendanceByActivity.map((item) => ({
+      activityId: item.activityId,
+      activityName: item.activityName,
+      totalReservations: parseInt(item.total),
+      completed: parseInt(item.completed),
+      cancelled: parseInt(item.cancelled),
+      attendanceRate:
+        item.total > 0
+          ? parseFloat(((item.completed / item.total) * 100).toFixed(2))
+          : 0,
+    }));
+  }
+
+  async getPeakHours() {
+    const peakHours = await this.reservationRepo
+      .createQueryBuilder('res')
+      .select('res.startTime', 'hour')
+      .addSelect('COUNT(res.id)', 'count')
+      .where('res.status = :confirmed', {
+        confirmed: ReservationStatus.confirmed,
+      })
+      .orWhere('res.status = :completed', {
+        completed: ReservationStatus.completed,
+      })
+      .groupBy('res.startTime')
+      .orderBy('count', 'DESC')
+      .limit(5)
+      .getRawMany();
+    return peakHours.map((item) => ({
+      hour: item.hour,
+      reservations: parseInt(item.count),
+    }));
+  }
 }

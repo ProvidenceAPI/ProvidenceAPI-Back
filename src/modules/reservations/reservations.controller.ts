@@ -60,6 +60,39 @@ export class ReservationsController {
     return this.service.createReservation(req.user.id, dto);
   }
 
+  @Get('stats/cancellation-rate')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({ summary: 'Get reservation cancellation rate (Admin)' })
+  @ApiResponse({ status: 200, description: 'Cancellation statistics' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  getReservationCancellationRate() {
+    return this.service.getReservationCancellationRate();
+  }
+
+  @Get('stats/attendance')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({ summary: 'Get attendance statistics by activity (Admin)' })
+  @ApiResponse({ status: 200, description: 'Attendance statistics' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  getActivityAttendanceStats() {
+    return this.service.getActivityAttendanceStats();
+  }
+
+  @Get('stats/peak-hours')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({ summary: 'Get peak reservation hours (Admin)' })
+  @ApiResponse({ status: 200, description: 'Peak hours statistics' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  getPeakHours() {
+    return this.service.getPeakHours();
+  }
+
   @Put(':id/cancel')
   @ApiOperation({ summary: 'Cancel a reservation' })
   @ApiResponse({
