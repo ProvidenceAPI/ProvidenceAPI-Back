@@ -260,4 +260,31 @@ export class SubscriptionsService {
       daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
     };
   }
+
+  async getSubscriptionCancellationRate() {
+    const [total, active, expired, cancelled] = await Promise.all([
+      this.subscriptionRepository.count(),
+      this.subscriptionRepository.count({
+        where: { status: SubscriptionStatus.active as any },
+      }),
+      this.subscriptionRepository.count({
+        where: { status: SubscriptionStatus.expired as any },
+      }),
+      this.subscriptionRepository.count({
+        where: { status: SubscriptionStatus.cancelled as any },
+      }),
+    ]);
+    const cancellationRate =
+      total > 0 ? Number(((cancelled / total) * 100).toFixed(2)) : 0;
+    const retentionRate =
+      total > 0 ? Number(((active / total) * 100).toFixed(2)) : 0;
+    return {
+      total,
+      active,
+      expired,
+      cancelled,
+      cancellationRate,
+      retentionRate,
+    };
+  }
 }

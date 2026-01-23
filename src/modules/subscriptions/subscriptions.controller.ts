@@ -80,4 +80,14 @@ export class SubscriptionsController {
   getExpiringSubscriptions() {
     return this.userActivitiesService.getExpiringSubscriptions();
   }
+
+  @Get('admin/cancellation-rate')
+  @UseGuards(RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({ summary: 'Get subscription cancellation rate (Admin)' })
+  @ApiResponse({ status: 200, description: 'Cancellation rate statistics' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  getSubscriptionCancellationRate() {
+    return this.userActivitiesService.getSubscriptionCancellationRate();
+  }
 }
