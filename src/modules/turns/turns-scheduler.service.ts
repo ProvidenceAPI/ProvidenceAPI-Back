@@ -11,34 +11,37 @@ export class TurnsSchedulerService {
   constructor(
     @InjectRepository(Turn)
     private readonly turnRepository: Repository<Turn>,
-  ) {}
-
-  // Cron jobs desactivados - se mantienen los métodos por si se necesitan manualmente
-  // @Cron(CronExpression.EVERY_DAY_AT_2AM)
-  async markPastTurnsAsCompleted() {
-    this.logger.log('Starting job: Mark past turns as completed');
-
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      const result = await this.turnRepository
-        .createQueryBuilder()
-        .update(Turn)
-        .set({ status: TurnStatus.completed })
-        .where('date < :today', { today })
-        .andWhere('status IN (:...statuses)', {
-          statuses: [TurnStatus.available, TurnStatus.full],
-        })
-        .execute();
-
-      this.logger.log(`✅ Marked ${result.affected} past turns as completed`);
-    } catch (error) {
-      this.logger.error('❌ Error marking past turns as completed', error);
-    }
+  ) {
+    this.logger.log('🚀 TurnSchedulerService LOADED');
   }
 
-  // @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
+  @Cron('0 3 * * *', {
+    name: 'mark-past-turns-3am',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  })
+  async markPastTurnsAsCompleted() {
+    this.logger.log('⏰ 3AM job: Mark past turns as completed');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const result = await this.turnRepository
+      .createQueryBuilder()
+      .update(Turn)
+      .set({ status: TurnStatus.completed })
+      .where('date < :today', { today })
+      .andWhere('status IN (:...statuses)', {
+        statuses: [TurnStatus.available, TurnStatus.full],
+      })
+      .execute();
+
+    this.logger.log(`✅ Marked ${result.affected} past turns as completed`);
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_1AM, {
+    name: 'delete-old-turns',
+    timeZone: 'America/Argentina/Buenos_Aires',
+  })
   async deleteOldCompletedTurns() {
     this.logger.log('Starting job: Delete old completed turns');
 

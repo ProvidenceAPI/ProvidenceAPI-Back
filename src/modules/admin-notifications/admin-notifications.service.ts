@@ -209,7 +209,6 @@ export class AdminNotificationsService {
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       oneWeekAgo.setHours(0, 0, 0, 0);
 
-      // Obtener administradores
       const admins = await this.usersRepository.find({
         where: [{ rol: Rol.admin }, { rol: Rol.superAdmin }],
       });
@@ -219,7 +218,6 @@ export class AdminNotificationsService {
         return;
       }
 
-      // Estadísticas de la semana
       const newUsers = await this.usersRepository.count({
         where: {
           createdAt: MoreThanOrEqual(oneWeekAgo),

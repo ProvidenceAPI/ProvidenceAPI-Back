@@ -12,6 +12,6 @@ import { NotificationsController } from './notifications.controller';
   imports: [TypeOrmModule.forFeature([User, Reservation, Payment]), MailModule],
   controllers: [NotificationsController],
   providers: [NotificationsService, NotificationsSchedulerService],
-  exports: [NotificationsService],
+  exports: [],
 })
 export class NotificationsModule {}

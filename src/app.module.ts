@@ -13,6 +13,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { AdminNotificationsModule } from './modules/admin-notifications/admin-notifications.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { AdminNotificationsModule } from './modules/admin-notifications/admin-no
     PaymentsModule,
     SubscriptionsModule,
     AdminNotificationsModule,
+    NotificationsModule,
   ],
   controllers: [],
   providers: [],

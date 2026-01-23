@@ -30,17 +30,20 @@ export class MailService {
     this.verifyConnection();
   }
 
-  /**
-   * Resuelve la ruta de templates: en dev están en src/modules/mail/templates;
-   * en prod (dist) el JS está en dist/src/modules/mail pero los assets en dist/modules/mail/templates.
-   */
   private resolveTemplatesPath(): string {
     const nextToModule = path.join(__dirname, 'templates');
     if (fs.existsSync(nextToModule)) {
       return nextToModule;
     }
-    // Build: __dirname = dist/src/modules/mail -> subir a dist y usar dist/modules/mail/templates
-    const distTemplates = path.join(__dirname, '..', '..', '..', 'modules', 'mail', 'templates');
+    const distTemplates = path.join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'modules',
+      'mail',
+      'templates',
+    );
     if (fs.existsSync(distTemplates)) {
       return distTemplates;
     }
@@ -63,7 +66,10 @@ export class MailService {
       await this.transporter.verify();
       this.logger.log('✅ Mail server connection established');
     } catch (error: any) {
-      this.logger.error('❌ Mail server connection failed:', error?.message || error);
+      this.logger.error(
+        '❌ Mail server connection failed:',
+        error?.message || error,
+      );
     }
   }
 
@@ -95,12 +101,14 @@ export class MailService {
   private async sendMail(options: MailOptions): Promise<void> {
     const user = this.configService.get<string>('MAIL_USER');
     const pass = this.configService.get<string>('MAIL_PASSWORD');
-    
+
     if (!user || !pass) {
       this.logger.warn(
         `⚠️ Mail no configurado (MAIL_USER/MAIL_PASSWORD faltantes). No se puede enviar correo a ${options.to}`,
       );
-      throw new Error('Mail service not configured. MAIL_USER and MAIL_PASSWORD are required.');
+      throw new Error(
+        'Mail service not configured. MAIL_USER and MAIL_PASSWORD are required.',
+      );
     }
 
     try {

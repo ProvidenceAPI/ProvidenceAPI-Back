@@ -16,7 +16,9 @@ export class SubscriptionsSchedulerService {
     private readonly subscriptionRepository: Repository<Subscription>,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.logger.log('✅ SubscriptionsSchedulerService loaded');
+  }
 
   @Cron('0 10 * * *', {
     name: 'subscription-expiry-reminders',
@@ -86,5 +88,4 @@ export class SubscriptionsSchedulerService {
       this.logger.error('❌ Subscription expiry reminders failed', error);
     }
   }
-
 }
