@@ -38,26 +38,36 @@ export class ActivitiesService {
       }
       const newActivity = this.activityRepository.create(createActivityDto);
       const savedActivity = await this.activityRepository.save(newActivity);
-      try {
-        const users = await this.usersService.findAllActive();
-        for (const user of users) {
-          await this.mailService.sendAdminNotification(user.email, {
-            title: '¡Nueva Actividad Disponible! 🎉',
-            message: `Estamos emocionados de anunciar nuestra nueva actividad: ${savedActivity.name}.\n\n${savedActivity.description}\n\nHorarios: ${savedActivity.schedule.join(', ')}\nPrecio: $${savedActivity.price}`,
-            actionUrl: `${this.configService.get('FRONTEND_URL')}/activities/${savedActivity.id}`,
-            actionText: 'VER ACTIVIDAD',
-          });
-        }
-      } catch (error) {
-        console.error(
-          'Error sending new activity notification:',
-          error.message,
-        );
-      }
+
+      this.sendNewActivityEmails(savedActivity).catch((err) =>
+        console.error('Background email error:', err),
+      );
       return savedActivity;
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Error creating activity');
+    }
+  }
+  private async sendNewActivityEmails(activity: Activity): Promise<void> {
+    try {
+      const users = await this.usersService.findAllActive();
+
+      await Promise.all(
+        users.map((user) =>
+          this.mailService
+            .sendAdminNotification(user.email, {
+              title: '¡Nueva Actividad Disponible! 🎉',
+              message: `Estamos emocionados de anunciar nuestra nueva actividad: ${activity.name}.\n\n${activity.description}\n\nHorarios: ${activity.schedule.join(', ')}\nPrecio: $${activity.price}`,
+              actionUrl: `${this.configService.get('FRONTEND_URL')}/activities/${activity.id}`,
+              actionText: 'VER ACTIVIDAD',
+            })
+            .catch((err) =>
+              console.error(`Error enviando email a ${user.email}:`, err),
+            ),
+        ),
+      );
+    } catch (error) {
+      console.error('Error in background email sending:', error.message);
     }
   }
 
