@@ -281,4 +281,35 @@ export class PaymentsService {
     }
     return payment;
   }
+
+  async getMonthlyRevenue() {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const endOfMonth = new Date();
+    endOfMonth.setMonth(endOfMonth.getMonth() + 1, 0);
+    endOfMonth.setHours(23, 59, 59, 999);
+
+    const payments = await this.paymentRepository
+      .createQueryBuilder('payment')
+      .where('payment.status = :status', { status: PaymentStatus.approved })
+      .andWhere('payment.createdAt >= :start', { start: startOfMonth })
+      .andWhere('payment.createdAt <= :end', { end: endOfMonth })
+      .getMany();
+
+    const total = payments.reduce(
+      (sum, payment) => sum + Number(payment.amount),
+      0,
+    );
+
+    return {
+      total,
+      count: payments.length,
+      month: startOfMonth.toLocaleString('es-ES', {
+        month: 'long',
+        year: 'numeric',
+      }),
+    };
+  }
 }
