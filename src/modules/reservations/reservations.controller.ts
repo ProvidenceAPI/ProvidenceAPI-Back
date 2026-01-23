@@ -22,6 +22,11 @@ import { Roles } from 'src/common/decorators/roles.decorators';
 import { Rol } from 'src/common/enum/roles.enum';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { CreateReservationDto } from './dtos/reservation.dto';
+import {
+  AdminCreateReservationDto,
+  AssignReservationDto,
+  ChangeReservationTurnDto,
+} from './dtos/admin-reservation.dto';
 import { ReservationsService } from './reservations.service';
 
 @ApiTags('Reservations')
@@ -58,6 +63,63 @@ export class ReservationsController {
   @ApiResponse({ status: 409, description: 'Time slot already reserved' })
   create(@Req() req, @Body() dto: CreateReservationDto) {
     return this.service.createReservation(req.user.id, dto);
+  }
+
+  @Post('admin')
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({
+    summary: 'Create a reservation for a user (Admin/SuperAdmin)',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Reservation created successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  createForUser(@Req() req, @Body() dto: AdminCreateReservationDto) {
+    const userId = dto.userId || req.user.id;
+    return this.service.createReservation(userId, { turnId: dto.turnId });
+  }
+
+  @Patch(':id/assign')
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({
+    summary: 'Assign a reservation to a different user (Admin/SuperAdmin)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reservation assigned successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  @ApiResponse({ status: 404, description: 'Reservation not found' })
+  assignReservation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AssignReservationDto,
+  ) {
+    return this.service.assignReservationToUser(id, dto.userId);
+  }
+
+  @Patch(':id/turn')
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({
+    summary: 'Change the turn/activity of a reservation (Admin/SuperAdmin)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Reservation turn changed successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
+  @ApiResponse({ status: 404, description: 'Reservation or turn not found' })
+  changeReservationTurn(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ChangeReservationTurnDto,
+  ) {
+    return this.service.changeReservationTurn(id, dto.turnId);
   }
 
   @Get('stats/cancellation-rate')

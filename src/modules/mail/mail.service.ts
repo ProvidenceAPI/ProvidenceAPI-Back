@@ -25,9 +25,29 @@ export class MailService {
   constructor(private readonly configService: ConfigService) {
     const mailConfig = getMailConfig(configService);
     this.transporter = nodemailer.createTransport(mailConfig);
-    this.templatesPath = path.join(__dirname, 'templates');
+    this.templatesPath = this.resolveTemplatesPath();
 
     this.verifyConnection();
+  }
+
+  /**
+   * Resuelve la ruta de templates: en dev están en src/modules/mail/templates;
+   * en prod (dist) el JS está en dist/src/modules/mail pero los assets en dist/modules/mail/templates.
+   */
+  private resolveTemplatesPath(): string {
+    const nextToModule = path.join(__dirname, 'templates');
+    if (fs.existsSync(nextToModule)) {
+      return nextToModule;
+    }
+    // Build: __dirname = dist/src/modules/mail -> subir a dist y usar dist/modules/mail/templates
+    const distTemplates = path.join(__dirname, '..', '..', '..', 'modules', 'mail', 'templates');
+    if (fs.existsSync(distTemplates)) {
+      return distTemplates;
+    }
+    this.logger.warn(
+      `Templates not found at ${nextToModule} nor ${distTemplates}. Using __dirname/templates as fallback.`,
+    );
+    return nextToModule;
   }
 
   private async verifyConnection() {
@@ -73,9 +93,19 @@ export class MailService {
   }
 
   private async sendMail(options: MailOptions): Promise<void> {
+    const user = this.configService.get<string>('MAIL_USER');
+    const pass = this.configService.get<string>('MAIL_PASSWORD');
+    
+    if (!user || !pass) {
+      this.logger.warn(
+        `⚠️ Mail no configurado (MAIL_USER/MAIL_PASSWORD faltantes). No se puede enviar correo a ${options.to}`,
+      );
+      throw new Error('Mail service not configured. MAIL_USER and MAIL_PASSWORD are required.');
+    }
+
     try {
       const mailOptions = {
-        from: `Providence Fitness <${this.configService.get('MAIL_FROM')}>`,
+        from: `Providence Fitness <${this.configService.get('MAIL_FROM') || user}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -84,10 +114,11 @@ export class MailService {
 
       const info = await this.transporter.sendMail(mailOptions);
       this.logger.log(`✅ Email sent to ${options.to}: ${info.messageId}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(
         `❌ Failed to send email to ${options.to}:`,
-        error.message,
+        error?.message || error,
+        error?.stack,
       );
       throw error;
     }
