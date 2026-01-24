@@ -157,7 +157,6 @@ export class AuthService {
         'Your account has been banned. Contact the administrator',
       );
     }
-
     if (user.status === UserStatus.cancelled) {
       throw new UnauthorizedException('Your account has been cancelled');
     }
@@ -169,9 +168,7 @@ export class AuthService {
     };
 
     const token = this.jwtService.sign(payload);
-
     const { password, ...userWithoutPassword } = user;
-
     return {
       message: 'Login successful',
       access_token: token,
@@ -199,7 +196,14 @@ export class AuthService {
       await this.usersRepository.save(user);
     }
     if (user.status === UserStatus.banned) {
-      throw new UnauthorizedException('Account banned');
+      throw new UnauthorizedException(
+        'Account banned. Contact the administrator',
+      );
+    }
+    if (user.status === UserStatus.cancelled) {
+      throw new UnauthorizedException(
+        'Account cancelled. Contact the administrator',
+      );
     }
 
     const payload = {
@@ -211,5 +215,50 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
     };
+  }
+
+  async handleGoogleCallback(googleUser: any): Promise<{
+    success: boolean;
+    redirectUrl: string;
+  }> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    try {
+      const result = await this.googleLogin(googleUser);
+      return {
+        success: true,
+        redirectUrl: `${frontendUrl}/auth/callback?token=${result.access_token}`,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        const errorMessage = error.message.toLowerCase();
+        if (
+          errorMessage.includes('banned') ||
+          errorMessage.includes('suspendida')
+        ) {
+          return {
+            success: false,
+            redirectUrl: `${frontendUrl}/auth/callback?error=account_banned`,
+          };
+        }
+        if (
+          errorMessage.includes('cancelled') ||
+          errorMessage.includes('cancelada')
+        ) {
+          return {
+            success: false,
+            redirectUrl: `${frontendUrl}/auth/callback?error=account_cancelled`,
+          };
+        }
+        return {
+          success: false,
+          redirectUrl: `${frontendUrl}/auth/callback?error=unauthorized`,
+        };
+      }
+      this.logger.error('Error in Google authentication:', error);
+      return {
+        success: false,
+        redirectUrl: `${frontendUrl}/auth/callback?error=authentication_failed`,
+      };
+    }
   }
 }
