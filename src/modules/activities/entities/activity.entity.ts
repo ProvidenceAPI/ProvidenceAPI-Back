@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
 import { Subscription } from 'src/modules/subscriptions/entities/subscriptions.entity';
+import { Turn } from 'src/modules/turns/entities/turn.entity';
 import { User } from 'src/modules/users/entities/users.entity';
 import {
   Entity,
@@ -130,8 +131,18 @@ export class Activity {
   updatedAt: Date;
 
   @ApiProperty({ type: () => Reservation, isArray: true })
-  @OneToMany(() => Reservation, (reservation) => reservation.activity)
+  @OneToMany(() => Reservation, (reservation) => reservation.activity, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   reservations: Reservation[];
+
+  @ApiProperty({ type: () => Turn, isArray: true })
+  @OneToMany(() => Turn, (turn) => turn.activity, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  turns: Turn[];
 
   @ApiProperty({ type: () => Subscription, isArray: true })
   @OneToMany(() => Subscription, (subscription) => subscription.activity)
