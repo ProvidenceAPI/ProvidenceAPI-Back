@@ -1,4 +1,3 @@
-
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -20,11 +19,10 @@ async function testEmailConnection() {
   console.log('- From:', process.env.MAIL_FROM);
   console.log('\n');
 
-
   const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST,
     port: Number(process.env.MAIL_PORT),
-    secure: false, 
+    secure: false,
     auth: {
       user: process.env.MAIL_USER,
       pass: process.env.MAIL_PASSWORD,
@@ -32,12 +30,10 @@ async function testEmailConnection() {
   });
 
   try {
-   
     console.log('⏳ Verificando conexión SMTP...');
     await transporter.verify();
     console.log('✅ Conexión exitosa!\n');
 
-   
     console.log('📧 Enviando email de prueba...');
     const info = await transporter.sendMail({
       from: process.env.MAIL_FROM,
