@@ -106,7 +106,10 @@ export class UsersService {
       throw new BadRequestException('User already has this status');
     if (user.rol === Rol.superAdmin)
       throw new ForbiddenException('Cannot change SuperAdmin status');
-    if (dto.status === UserStatus.banned) {
+    if (
+      dto.status === UserStatus.banned ||
+      dto.status === UserStatus.cancelled
+    ) {
       await this.reservationsService.cancelAllActiveReservationsByUser(id);
     }
     user.status = dto.status;
