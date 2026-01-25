@@ -639,6 +639,7 @@ export class ReservationsService {
     reservation.turnId = newTurnId;
     reservation.turn = newTurn;
     reservation.activityId = newTurn.activityId;
+    reservation.activity = newTurn.activity;
     reservation.activityDate =
       newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
     reservation.startTime = newTurn.startTime;
