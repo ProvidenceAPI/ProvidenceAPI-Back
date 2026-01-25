@@ -26,6 +26,16 @@ export class CreateActivityDto {
   name: string;
 
   @ApiProperty({
+    example: 'Juan Pérez',
+    description: 'Nombre del entrenador/instructor',
+    required: false,
+  })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(100)
+  trainer: string;
+
+  @ApiProperty({
     example:
       'Clase de yoga para todos los niveles, enfocada en flexibilidad y relajación',
     description: 'Descripción detallada de la actividad',
@@ -60,7 +70,7 @@ export class CreateActivityDto {
   @ApiProperty({
     example: 15,
     description: 'Cantidad de días anticipados para reservar',
-    default: 15, // revisar con fede cuantos dias **
+    default: 15,
   })
   @IsOptional()
   @IsNumber()
@@ -107,7 +117,8 @@ export class CreateActivityDto {
   schedule: string[];
 
   @ApiProperty({
-    example: 'https://res.cloudinary.com/ejemplo/image/upload/v123/yoga.jpg',
+    example:
+      'https://res.cloudinary.com/ds4vplktr/image/upload/v1768177288/profiles/rrl49oub36ljnyt67y69.jpg',
     description: 'URL de la imagen de la actividad (se sube con Cloudinary)',
     required: false,
   })

@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsDateString, IsEnum } from 'class-validator';
+import { IsOptional, IsUUID, IsDateString, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { TurnStatus } from '../entities/turn.entity';
 
@@ -30,12 +30,12 @@ export class FilterTurnsDto {
 
   @ApiPropertyOptional({
     enum: TurnStatus,
-    example: TurnStatus.available,
+    example: 'available',
     description: 'Filter by turn status',
   })
   @IsOptional()
-  @IsEnum(TurnStatus)
-  status?: TurnStatus;
+  @IsString()
+  status?: string;
 
   @ApiPropertyOptional({
     example: true,

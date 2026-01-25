@@ -7,7 +7,13 @@ import { Activity } from 'src/modules/activities/entities/activity.entity';
 import { Payment } from 'src/modules/payments/entities/payment.entity';
 import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
 import { Subscription } from 'src/modules/subscriptions/entities/subscriptions.entity';
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+} from 'typeorm';
 
 @Entity({
   name: 'users',
@@ -98,6 +104,10 @@ export class User {
     default: Rol.user,
   })
   rol: Rol;
+
+  @ApiProperty({ example: '2025-01-08T18:30:00.000Z' })
+  @CreateDateColumn()
+  createdAt: Date;
 
   @ApiProperty({ enum: AuthProvider })
   @Column({

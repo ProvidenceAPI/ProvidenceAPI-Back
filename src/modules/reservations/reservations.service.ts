@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -25,6 +26,8 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ReservationsService {
+  private readonly logger = new Logger(ReservationsService.name);
+
   constructor(
     @InjectRepository(Reservation)
     private readonly reservationRepo: Repository<Reservation>,
@@ -58,7 +61,21 @@ export class ReservationsService {
       throw new BadRequestException('This turn has already occurred');
     if (turn.availableSpots <= 0)
       throw new BadRequestException('No available spots for this turn');
-
+    const now = new Date();
+    const turnDate =
+      turn.date instanceof Date
+        ? turn.date.toISOString().split('T')[0]
+        : turn.date;
+    const turnDateTime = new Date(`${turnDate}T${turn.startTime}`);
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    if (turnDateTime < oneHourFromNow) {
+      const minutesRemaining = Math.floor(
+        (turnDateTime.getTime() - now.getTime()) / (60 * 1000),
+      );
+      throw new BadRequestException(
+        `Debes reservar con al menos 1 hora de anticipación. Este turno comienza en ${minutesRemaining} minutos.`,
+      );
+    }
     const hasActiveSubscription =
       await this.subscriptionsService.checkSubscriptionStatus(
         userId,
@@ -82,15 +99,6 @@ export class ReservationsService {
           'You have already used your free trial. Subscribe to continue booking classes.',
         );
     }
-    const now = new Date();
-    const turnDate =
-      turn.date instanceof Date
-        ? turn.date.toISOString().split('T')[0]
-        : turn.date;
-    const turnDateTime = new Date(`${turnDate}T${turn.startTime}`);
-    if (turnDateTime < now)
-      throw new BadRequestException('Cannot reserve past turns');
-
     const reservationDate = turnDate;
     const existingReservationSameDay = await this.reservationRepo.findOne({
       where: {
@@ -117,7 +125,6 @@ export class ReservationsService {
       throw new ConflictException(
         'You already have a reservation for this turn',
       );
-
     const reservation = this.reservationRepo.create({
       activityDate: turn.date,
       startTime: turn.startTime,
@@ -125,27 +132,36 @@ export class ReservationsService {
       userId: user.id,
       turnId: dto.turnId,
       activityId: turn.activityId,
+      isFreeTrial: !hasActiveSubscription && turn.isFreeTrial,
       user,
       turn,
       activity: turn.activity,
     });
     const savedReservation = await this.reservationRepo.save(reservation);
     await this.turnsService.decrementAvailableSpots(dto.turnId);
-
     if (!hasActiveSubscription && turn.isFreeTrial) {
       await this.subscriptionsService.markFreeTrialAsUsed(
         userId,
         turn.activityId,
       );
-      console.log(
-        `✅ User ${userId} used their free trial on activity ${turn.activityId}`,
-      );
     }
     try {
+      const turnDate =
+        turn.date instanceof Date ? turn.date : new Date(turn.date);
+
+      this.logger.log(
+        `📧 Enviando correo de confirmación de reserva a ${user.email} para actividad ${turn.activity.name}`,
+      );
+
       await this.mailService.sendReservationConfirmation(user.email, {
         userName: user.name,
         activityName: turn.activity.name,
-        turnDate: turn.date.toLocaleDateString('es-ES'),
+        turnDate: turnDate.toLocaleDateString('es-ES', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
         turnTime: turn.startTime,
         endTime: turn.endTime,
         instructor: 'Por asignar',
@@ -154,8 +170,16 @@ export class ReservationsService {
           this.configService.get<string>('FRONTEND_URL') ||
           'http://localhost:3001',
       });
-    } catch (error) {
-      console.error('Error sending reservation confirmation email:', error);
+
+      this.logger.log(
+        `✅ Correo de confirmación enviado exitosamente a ${user.email}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Error al enviar correo de confirmación de reserva a ${user.email}:`,
+        error?.message || error,
+        error?.stack,
+      );
     }
     return savedReservation;
   }
@@ -201,13 +225,23 @@ export class ReservationsService {
     if (reservation.turnId) {
       await this.turnsService.incrementAvailableSpots(reservation.turnId);
     }
+
     try {
+      const activityDate =
+        reservation.activityDate instanceof Date
+          ? reservation.activityDate
+          : new Date(reservation.activityDate);
+
+      this.logger.log(
+        `📧 Enviando correo de cancelación de reserva a ${reservation.user.email}`,
+      );
+
       await this.mailService.sendReservationCancellation(
         reservation.user.email,
         {
           userName: reservation.user.name,
           activityName: reservation.turn.activity.name,
-          turnDate: reservation.activityDate.toLocaleDateString('es-ES', {
+          turnDate: activityDate.toLocaleDateString('es-ES', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
@@ -224,9 +258,18 @@ export class ReservationsService {
             'http://localhost:3001',
         },
       );
-    } catch (error) {
-      console.error('❌ Error sending cancellation email:', error.message);
+
+      this.logger.log(
+        `✅ Correo de cancelación enviado exitosamente a ${reservation.user.email}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Error al enviar correo de cancelación a ${reservation.user.email}:`,
+        error?.message || error,
+        error?.stack,
+      );
     }
+
     return { message: 'Reservation cancelled successfully' };
   }
 
@@ -251,36 +294,51 @@ export class ReservationsService {
     }
     await this.reservationRepo.save(activeReservations);
     await this.turnsService.cancelTurn(turnId);
-
     let emailsSent = 0;
     let emailsFailed = 0;
 
     for (const reservation of activeReservations) {
       try {
+        const activityDate =
+          reservation.activityDate instanceof Date
+            ? reservation.activityDate
+            : new Date(reservation.activityDate);
+        this.logger.log(
+          `📧 Enviando notificación de turno cancelado a ${reservation.user.email}`,
+        );
         await this.mailService.sendTurnCancellationNotification(
           reservation.user.email,
           {
             userName: reservation.user.name,
             activityName: reservation.turn.activity.name,
-            turnDate: reservation.activityDate.toLocaleDateString('es-ES'),
+            turnDate: activityDate.toLocaleDateString('es-ES', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            }),
             turnTime: reservation.startTime,
             reason: reason || 'Cancelación administrativa del turno',
             refundInfo:
               'Puedes reprogramar tu clase sin costo adicional. Tu suscripción permanece activa y puedes elegir otro turno disponible.',
+            frontendUrl:
+              this.configService.get<string>('FRONTEND_URL') ||
+              'http://localhost:3001',
           },
         );
+        this.logger.log(
+          `✅ Notificación de turno cancelado enviada a ${reservation.user.email}`,
+        );
         emailsSent++;
-      } catch (error) {
-        console.error(
-          `Error sending turn cancellation email to ${reservation.user.email}:`,
-          error,
+      } catch (error: any) {
+        this.logger.error(
+          `❌ Error al enviar notificación de turno cancelado a ${reservation.user.email}:`,
+          error?.message || error,
+          error?.stack,
         );
         emailsFailed++;
       }
     }
-    console.log(
-      `Turn ${turnId} cancelled. Emails sent: ${emailsSent}, failed: ${emailsFailed}`,
-    );
     return {
       message: `Turn cancelled successfully. ${activeReservations.length} users were notified (${emailsSent} emails sent, ${emailsFailed} failed).`,
       reservationsCancelled: activeReservations.length,
@@ -310,15 +368,12 @@ export class ReservationsService {
       },
       relations: ['turn'],
     });
-
     for (const reservation of activeReservations) {
       reservation.status = ReservationStatus.cancelled;
-
       if (reservation.turnId) {
         await this.turnsService.incrementAvailableSpots(reservation.turnId);
       }
     }
-
     await this.reservationRepo.save(activeReservations);
   }
 
@@ -329,5 +384,356 @@ export class ReservationsService {
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
     return reservation;
+  }
+
+  async getReservationCancellationRate() {
+    const [total, cancelled, completed] = await Promise.all([
+      this.reservationRepo.count(),
+      this.reservationRepo.count({
+        where: { status: ReservationStatus.cancelled },
+      }),
+      this.reservationRepo.count({
+        where: { status: ReservationStatus.completed },
+      }),
+    ]);
+    const cancellationRate =
+      total > 0 ? parseFloat(((cancelled / total) * 100).toFixed(2)) : 0;
+    const completionRate =
+      total > 0 ? parseFloat(((completed / total) * 100).toFixed(2)) : 0;
+    return {
+      total,
+      cancelled,
+      completed,
+      cancellationRate,
+      completionRate,
+    };
+  }
+
+  async getActivityAttendanceStats() {
+    const attendanceByActivity = await this.reservationRepo
+      .createQueryBuilder('res')
+      .select('activity.id', 'activityId')
+      .addSelect('activity.name', 'activityName')
+      .addSelect(
+        'COUNT(CASE WHEN res.status = :completed THEN 1 END)',
+        'completed',
+      )
+      .addSelect(
+        'COUNT(CASE WHEN res.status = :cancelled THEN 1 END)',
+        'cancelled',
+      )
+      .addSelect('COUNT(*)', 'total')
+      .leftJoin('res.activity', 'activity')
+      .setParameter('completed', ReservationStatus.completed)
+      .setParameter('cancelled', ReservationStatus.cancelled)
+      .groupBy('activity.id')
+      .addGroupBy('activity.name')
+      .getRawMany();
+
+    return attendanceByActivity.map((item) => ({
+      activityId: item.activityId,
+      activityName: item.activityName,
+      totalReservations: parseInt(item.total),
+      completed: parseInt(item.completed),
+      cancelled: parseInt(item.cancelled),
+      attendanceRate:
+        item.total > 0
+          ? parseFloat(((item.completed / item.total) * 100).toFixed(2))
+          : 0,
+    }));
+  }
+
+  async getPeakHours() {
+    const peakHours = await this.reservationRepo
+      .createQueryBuilder('res')
+      .select('res.startTime', 'hour')
+      .addSelect('COUNT(res.id)', 'count')
+      .where('res.status = :confirmed', {
+        confirmed: ReservationStatus.confirmed,
+      })
+      .orWhere('res.status = :completed', {
+        completed: ReservationStatus.completed,
+      })
+      .groupBy('res.startTime')
+      .orderBy('count', 'DESC')
+      .limit(5)
+      .getRawMany();
+    return peakHours.map((item) => ({
+      hour: item.hour,
+      reservations: parseInt(item.count),
+    }));
+  }
+
+  async assignReservationToUser(
+    reservationId: string,
+    userId: string,
+  ): Promise<Reservation> {
+    const reservation = await this.reservationRepo.findOne({
+      where: { id: reservationId },
+      relations: ['user', 'turn', 'activity'],
+    });
+    if (!reservation) {
+      throw new NotFoundException('Reservation not found');
+    }
+    const newUser = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    if (!newUser) {
+      throw new NotFoundException('User not found');
+    }
+    if (newUser.status === UserStatus.banned) {
+      throw new ForbiddenException('Cannot assign reservation to banned user');
+    }
+    if (newUser.status === UserStatus.cancelled) {
+      throw new ForbiddenException(
+        'Cannot assign reservation to cancelled user',
+      );
+    }
+
+    const existingReservation = await this.reservationRepo.findOne({
+      where: {
+        turnId: reservation.turnId,
+        user: { id: userId },
+        status: ReservationStatus.confirmed,
+      },
+    });
+    if (existingReservation && existingReservation.id !== reservationId) {
+      throw new ConflictException(
+        'User already has a reservation for this turn',
+      );
+    }
+    const oldUser = reservation.user;
+    reservation.user = newUser;
+    const updatedReservation = await this.reservationRepo.save(reservation);
+
+    try {
+      const activityDate =
+        reservation.activityDate instanceof Date
+          ? reservation.activityDate
+          : new Date(reservation.activityDate);
+      this.logger.log(
+        `📧 Enviando correo de confirmación de reserva reasignada a ${newUser.email}`,
+      );
+      await this.mailService.sendReservationConfirmation(newUser.email, {
+        userName: newUser.name,
+        activityName: reservation.turn.activity.name,
+        turnDate: activityDate.toLocaleDateString('es-ES', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        turnTime: reservation.startTime,
+        endTime: reservation.turn.endTime,
+        instructor: 'Por asignar',
+        location: 'Provincia de Buenos Aires 760',
+        frontendUrl:
+          this.configService.get<string>('FRONTEND_URL') ||
+          'http://localhost:3001',
+      });
+      this.logger.log(
+        `✅ Correo de confirmación enviado exitosamente a ${newUser.email}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Error al enviar correo de confirmación de reserva reasignada a ${newUser.email}:`,
+        error?.message || error,
+        error?.stack,
+      );
+    }
+    if (oldUser.id !== newUser.id) {
+      try {
+        const activityDate =
+          reservation.activityDate instanceof Date
+            ? reservation.activityDate
+            : new Date(reservation.activityDate);
+        this.logger.log(
+          `📧 Enviando correo de cancelación de reserva reasignada a ${oldUser.email}`,
+        );
+        await this.mailService.sendReservationCancellation(oldUser.email, {
+          userName: oldUser.name,
+          activityName: reservation.turn.activity.name,
+          turnDate: activityDate.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          turnTime: reservation.startTime,
+          reason: 'Reserva reasignada por el administrador',
+          refundInfo:
+            'Esta reserva ha sido reasignada a otro usuario por el administrador.',
+          frontendUrl:
+            this.configService.get<string>('FRONTEND_URL') ||
+            'http://localhost:3001',
+        });
+        this.logger.log(
+          `✅ Correo de cancelación enviado exitosamente a ${oldUser.email}`,
+        );
+      } catch (error: any) {
+        this.logger.error(
+          `❌ Error al enviar correo de cancelación de reserva reasignada a ${oldUser.email}:`,
+          error?.message || error,
+          error?.stack,
+        );
+      }
+    }
+    return updatedReservation;
+  }
+
+  async changeReservationTurn(
+    reservationId: string,
+    newTurnId: string,
+  ): Promise<Reservation> {
+    const reservation = await this.reservationRepo.findOne({
+      where: { id: reservationId },
+      relations: ['user', 'turn', 'turn.activity', 'activity'],
+    });
+    if (!reservation) {
+      throw new NotFoundException('Reservation not found');
+    }
+    if (reservation.status === ReservationStatus.cancelled) {
+      throw new BadRequestException(
+        'Cannot change turn of a cancelled reservation',
+      );
+    }
+
+    const newTurn = await this.turnsService.findOne(newTurnId);
+    if (!newTurn) {
+      throw new NotFoundException('Turn not found');
+    }
+    if (newTurn.status === TurnStatus.cancelled) {
+      throw new BadRequestException(
+        'Cannot assign reservation to a cancelled turn',
+      );
+    }
+    if (newTurn.status === TurnStatus.completed) {
+      throw new BadRequestException(
+        'Cannot assign reservation to a completed turn',
+      );
+    }
+    if (newTurn.availableSpots <= 0) {
+      throw new BadRequestException('No available spots for this turn');
+    }
+
+    const existingReservation = await this.reservationRepo.findOne({
+      where: {
+        turnId: newTurnId,
+        user: { id: reservation.user.id },
+        status: ReservationStatus.confirmed,
+      },
+    });
+    if (existingReservation && existingReservation.id !== reservationId) {
+      throw new ConflictException(
+        'User already has a reservation for this turn',
+      );
+    }
+    const oldTurn = reservation.turn;
+    const oldActivityName =
+      oldTurn?.activity?.name ||
+      reservation.activity?.name ||
+      'Actividad anterior';
+    if (oldTurn) {
+      await this.turnsService.incrementAvailableSpots(oldTurn.id);
+    }
+    reservation.turnId = newTurnId;
+    reservation.turn = newTurn;
+    reservation.activityId = newTurn.activityId;
+    reservation.activity = newTurn.activity;
+    reservation.activityDate =
+      newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
+    reservation.startTime = newTurn.startTime;
+    reservation.endTime = newTurn.endTime;
+
+    await this.turnsService.decrementAvailableSpots(newTurnId);
+    await this.reservationRepo.save(reservation);
+
+    try {
+      const newTurnDate =
+        newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
+      this.logger.log(
+        `📧 Enviando correo de confirmación de cambio de turno a ${reservation.user.email}`,
+      );
+      await this.mailService.sendReservationConfirmation(
+        reservation.user.email,
+        {
+          userName: reservation.user.name,
+          activityName: newTurn.activity.name,
+          turnDate: newTurnDate.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          turnTime: newTurn.startTime,
+          endTime: newTurn.endTime,
+          instructor: 'Por asignar',
+          location: 'Provincia de Buenos Aires 760',
+          frontendUrl:
+            this.configService.get<string>('FRONTEND_URL') ||
+            'http://localhost:3001',
+        },
+      );
+      this.logger.log(
+        `✅ Correo de confirmación de cambio de turno enviado exitosamente a ${reservation.user.email}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Error al enviar correo de confirmación de cambio de turno a ${reservation.user.email}:`,
+        error?.message || error,
+        error?.stack,
+      );
+    }
+
+    try {
+      const oldTurnDate = oldTurn?.date
+        ? oldTurn.date instanceof Date
+          ? oldTurn.date
+          : new Date(oldTurn.date)
+        : reservation.activityDate instanceof Date
+          ? reservation.activityDate
+          : new Date(reservation.activityDate);
+      this.logger.log(
+        `📧 Enviando correo de cancelación de turno anterior a ${reservation.user.email}`,
+      );
+
+      await this.mailService.sendReservationCancellation(
+        reservation.user.email,
+        {
+          userName: reservation.user.name,
+          activityName: oldActivityName,
+          turnDate: oldTurnDate.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          turnTime: oldTurn?.startTime || reservation.startTime,
+          reason: 'Reserva reasignada a otra actividad por el administrador',
+          refundInfo:
+            'Tu reserva ha sido reasignada a otra actividad. Revisa tu email para ver los nuevos detalles.',
+          frontendUrl:
+            this.configService.get<string>('FRONTEND_URL') ||
+            'http://localhost:3001',
+        },
+      );
+      this.logger.log(
+        `✅ Correo de cancelación de turno anterior enviado exitosamente a ${reservation.user.email}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Error al enviar correo de cancelación de turno anterior a ${reservation.user.email}:`,
+        error?.message || error,
+        error?.stack,
+      );
+    }
+    const updatedReservation = await this.reservationRepo.findOne({
+      where: { id: reservationId },
+      relations: ['user', 'turn', 'turn.activity', 'activity'],
+    });
+    if (!updatedReservation) {
+      throw new NotFoundException('Reservation not found after update');
+    }
+    return updatedReservation;
   }
 }

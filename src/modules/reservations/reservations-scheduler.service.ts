@@ -15,9 +15,11 @@ export class ReservationsSchedulerService {
     private readonly reservationRepository: Repository<Reservation>,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.logger.log('🚀 ReservationsSchedulerService LOADED');
+  }
 
-  @Cron('0 10 * * *', {
+  @Cron('0 8 * * *', {
     name: 'turn-reminders',
     timeZone: 'America/Argentina/Buenos_Aires',
   })

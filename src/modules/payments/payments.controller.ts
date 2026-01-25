@@ -88,6 +88,18 @@ export class PaymentsController {
     return this.paymentsService.getAllPayments();
   }
 
+  @Get('stats/monthly-revenue')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get monthly revenue (Admin)' })
+  @ApiResponse({ status: 200, description: 'Monthly revenue stats' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  getMonthlyRevenue() {
+    return this.paymentsService.getMonthlyRevenue();
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()

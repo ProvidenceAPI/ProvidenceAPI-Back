@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
 import { Subscription } from 'src/modules/subscriptions/entities/subscriptions.entity';
+import { Turn } from 'src/modules/turns/entities/turn.entity';
 import { User } from 'src/modules/users/entities/users.entity';
 import {
   Entity,
@@ -35,6 +36,13 @@ export class Activity {
   })
   @Column({ type: 'varchar', length: 100, nullable: false })
   name: string;
+
+  @ApiProperty({
+    example: 'Fede Dibello',
+    description: 'Trainer/instructor name',
+  })
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  trainer: string;
 
   @ApiProperty({
     example: 'A relaxing yoga class for all levels',
@@ -93,7 +101,8 @@ export class Activity {
   schedule: string[];
 
   @ApiProperty({
-    example: 'https://example.com/images/yoga-class.jpg',
+    example:
+      'https://res.cloudinary.com/ds4vplktr/image/upload/v1768177288/profiles/rrl49oub36ljnyt67y69.jpg',
     description: 'Image URL representing the activity',
   })
   @Column({ type: 'varchar', nullable: true })
@@ -122,8 +131,18 @@ export class Activity {
   updatedAt: Date;
 
   @ApiProperty({ type: () => Reservation, isArray: true })
-  @OneToMany(() => Reservation, (reservation) => reservation.activity)
+  @OneToMany(() => Reservation, (reservation) => reservation.activity, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   reservations: Reservation[];
+
+  @ApiProperty({ type: () => Turn, isArray: true })
+  @OneToMany(() => Turn, (turn) => turn.activity, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
+  turns: Turn[];
 
   @ApiProperty({ type: () => Subscription, isArray: true })
   @OneToMany(() => Subscription, (subscription) => subscription.activity)

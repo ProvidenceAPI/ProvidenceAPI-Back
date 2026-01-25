@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '../users/entities/users.entity';
@@ -20,6 +21,8 @@ import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
@@ -96,7 +99,14 @@ export class AuthService {
 
       const { password, status, rol, provider, ...userResponse } = savedUser;
 
-      this.sendWelcomeEmailAsync(savedUser);
+      this.sendWelcomeEmailAsync(savedUser).catch((error) => {
+        this.logger.error(
+          `Failed to send welcome email to ${savedUser.email} after user creation`,
+          error?.stack || error,
+        );
+      });
+
+      this.logger.log(`✅ User created successfully: ${savedUser.email}`);
 
       return {
         message: 'User created successfully',
@@ -108,7 +118,19 @@ export class AuthService {
   }
 
   private async sendWelcomeEmailAsync(user: User): Promise<void> {
+    const mailUser = this.configService.get<string>('MAIL_USER');
+    const mailPassword = this.configService.get<string>('MAIL_PASSWORD');
+
+    if (!mailUser || !mailPassword) {
+      this.logger.warn(
+        `⚠️ Mail not configured (MAIL_USER/MAIL_PASSWORD missing). Welcome email NOT sent to ${user.email}`,
+      );
+      return;
+    }
+
     try {
+      this.logger.log(`📧 Attempting to send welcome email to ${user.email}`);
+
       await this.mailservice.sendWelcomeEmail(user.email, {
         userName: user.name,
         userEmail: user.email,
@@ -118,8 +140,14 @@ export class AuthService {
           this.configService.get<string>('FRONTEND_URL') ||
           'http://localhost:3001',
       });
-    } catch (error) {
-      console.error('Failed to send welcome email:', error);
+
+      this.logger.log(`✅ Welcome email sent successfully to ${user.email}`);
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed to send welcome email to ${user.email}:`,
+        error?.message || error,
+      );
+      this.logger.error(`Error details:`, error?.stack || error);
     }
   }
 
@@ -129,7 +157,6 @@ export class AuthService {
         'Your account has been banned. Contact the administrator',
       );
     }
-
     if (user.status === UserStatus.cancelled) {
       throw new UnauthorizedException('Your account has been cancelled');
     }
@@ -141,9 +168,7 @@ export class AuthService {
     };
 
     const token = this.jwtService.sign(payload);
-
     const { password, ...userWithoutPassword } = user;
-
     return {
       message: 'Login successful',
       access_token: token,
@@ -171,7 +196,14 @@ export class AuthService {
       await this.usersRepository.save(user);
     }
     if (user.status === UserStatus.banned) {
-      throw new UnauthorizedException('Account banned');
+      throw new UnauthorizedException(
+        'Account banned. Contact the administrator',
+      );
+    }
+    if (user.status === UserStatus.cancelled) {
+      throw new UnauthorizedException(
+        'Account cancelled. Contact the administrator',
+      );
     }
 
     const payload = {
@@ -183,5 +215,50 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
     };
+  }
+
+  async handleGoogleCallback(googleUser: any): Promise<{
+    success: boolean;
+    redirectUrl: string;
+  }> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    try {
+      const result = await this.googleLogin(googleUser);
+      return {
+        success: true,
+        redirectUrl: `${frontendUrl}/auth/callback?token=${result.access_token}`,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        const errorMessage = error.message.toLowerCase();
+        if (
+          errorMessage.includes('banned') ||
+          errorMessage.includes('suspendida')
+        ) {
+          return {
+            success: false,
+            redirectUrl: `${frontendUrl}/auth/callback?error=account_banned`,
+          };
+        }
+        if (
+          errorMessage.includes('cancelled') ||
+          errorMessage.includes('cancelada')
+        ) {
+          return {
+            success: false,
+            redirectUrl: `${frontendUrl}/auth/callback?error=account_cancelled`,
+          };
+        }
+        return {
+          success: false,
+          redirectUrl: `${frontendUrl}/auth/callback?error=unauthorized`,
+        };
+      }
+      this.logger.error('Error in Google authentication:', error);
+      return {
+        success: false,
+        redirectUrl: `${frontendUrl}/auth/callback?error=authentication_failed`,
+      };
+    }
   }
 }

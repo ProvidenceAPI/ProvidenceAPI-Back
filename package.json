@@ -17,7 +17,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:mail": "ts-node scripts/test-all-mails.ts",
+    "test:email": "ts-node scripts/test-email.ts"
   },
   "dependencies": {
     "@nestjs/cli": "^11.0.14",
@@ -28,7 +30,7 @@
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.0",
-    "@nestjs/swagger": "^11.2.4",
+    "@nestjs/swagger": "^11.2.5",
     "@nestjs/typeorm": "^11.0.0",
     "@types/multer": "^2.0.0",
     "bcrypt": "^6.0.0",
@@ -38,8 +40,9 @@
     "cors": "^2.8.5",
     "cron": "^4.4.0",
     "dotenv": "^17.2.3",
-    "mercadopago": "^2.12.0",
     "handlebars": "^4.7.8",
+    "lodash": "^4.17.21",
+    "mercadopago": "^2.12.0",
     "nodemailer": "^7.0.12",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -98,5 +101,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "overrides": {
+    "lodash": "^4.17.21"
   }
 }

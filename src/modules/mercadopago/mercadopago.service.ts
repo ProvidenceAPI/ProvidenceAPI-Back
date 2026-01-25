@@ -84,10 +84,6 @@ export class MercadoPagoService {
     xRequestId: string,
   ): boolean {
     try {
-      // TODO: Implementar verificación de firma
-      // https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks#editor_3
-
-      // Por ahora, solo log
       this.logger.log('Webhook signature verification (TODO)');
       return true;
     } catch (error) {

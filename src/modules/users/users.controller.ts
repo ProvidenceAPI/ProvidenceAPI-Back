@@ -153,6 +153,17 @@ export class UsersController {
     return this.userService.getAllUsers();
   }
 
+  @Get('stats')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({ summary: 'Get user statistics (Admin)' })
+  @ApiResponse({ status: 200, description: 'User statistics' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  getUserStats() {
+    return this.userService.getUserStats();
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Rol.admin, Rol.superAdmin)

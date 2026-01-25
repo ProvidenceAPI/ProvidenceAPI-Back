@@ -16,7 +16,9 @@ export class SubscriptionsSchedulerService {
     private readonly subscriptionRepository: Repository<Subscription>,
     private readonly mailService: MailService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.logger.log('✅ SubscriptionsSchedulerService loaded');
+  }
 
   @Cron('0 10 * * *', {
     name: 'subscription-expiry-reminders',
@@ -84,30 +86,6 @@ export class SubscriptionsSchedulerService {
       );
     } catch (error) {
       this.logger.error('❌ Subscription expiry reminders failed', error);
-    }
-  }
-
-  @Cron('0 2 * * *', {
-    name: 'expire-old-subscriptions',
-    timeZone: 'America/Argentina/Buenos_Aires',
-  })
-  async expireOldSubscriptions() {
-    this.logger.log('🔄 Starting expire old subscriptions job...');
-
-    try {
-      const now = new Date();
-
-      const result = await this.subscriptionRepository
-        .createQueryBuilder()
-        .update(Subscription)
-        .set({ status: SubscriptionStatus.expired })
-        .where('expirationDate < :now', { now })
-        .andWhere('status = :status', { status: SubscriptionStatus.active })
-        .execute();
-
-      this.logger.log(`✅ Expired ${result.affected} old active subscriptions`);
-    } catch (error) {
-      this.logger.error('❌ Expire old subscriptions job failed', error);
     }
   }
 }

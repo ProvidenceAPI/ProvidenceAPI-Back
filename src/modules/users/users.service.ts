@@ -106,7 +106,10 @@ export class UsersService {
       throw new BadRequestException('User already has this status');
     if (user.rol === Rol.superAdmin)
       throw new ForbiddenException('Cannot change SuperAdmin status');
-    if (dto.status === UserStatus.banned) {
+    if (
+      dto.status === UserStatus.banned ||
+      dto.status === UserStatus.cancelled
+    ) {
       await this.reservationsService.cancelAllActiveReservationsByUser(id);
     }
     user.status = dto.status;
@@ -198,5 +201,22 @@ export class UsersService {
     const savedUser = await this.userRepository.save(newUser);
     const { password, ...userWithoutPassword } = savedUser;
     return userWithoutPassword;
+  }
+
+  async getUserStats() {
+    const [total, active, inactive, banned] = await Promise.all([
+      this.userRepository.count(),
+      this.userRepository.count({
+        where: { status: UserStatus.active },
+      }),
+      this.userRepository.count({
+        where: { status: UserStatus.cancelled },
+      }),
+      this.userRepository.count({
+        where: { status: UserStatus.banned },
+      }),
+    ]);
+
+    return { total, active, inactive, banned };
   }
 }

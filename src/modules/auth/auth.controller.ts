@@ -7,6 +7,7 @@ import {
   UseGuards,
   Get,
   Res,
+  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
@@ -39,6 +40,14 @@ export class AuthController {
   })
   async signup(@Body() user: SignupDto) {
     return this.authService.createUser(user);
+  }
+
+  @Get('check-email/:email')
+  @ApiOperation({ summary: 'Check if email is already registered' })
+  @ApiResponse({ status: 200, description: 'Email availability checked' })
+  async checkEmail(@Param('email') email: string) {
+    const user = await this.usersService.findByEmail(email);
+    return { exists: !!user };
   }
 
   @UseGuards(AuthGuard('local'))
@@ -74,11 +83,8 @@ export class AuthController {
   @Get('google/login/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginCallback(@Req() req, @Res() res: Response) {
-    const result = await this.authService.googleLogin(req.user);
-
-    res.redirect(
-      `${process.env.FRONTEND_URL}/auth/callback?token=${result.access_token}`,
-    );
+    const result = await this.authService.handleGoogleCallback(req.user);
+    return res.redirect(result.redirectUrl);
   }
 
   @Get('me')
