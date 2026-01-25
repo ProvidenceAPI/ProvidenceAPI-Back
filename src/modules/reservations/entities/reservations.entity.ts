@@ -88,7 +88,9 @@ export class Reservation {
     type: () => Activity,
     description: 'Activity associated with this reservation (direct reference)',
   })
-  @ManyToOne(() => Activity, { eager: true })
+  @ManyToOne(() => Activity, (activity) => activity.reservations, {
+    eager: true,
+  })
   @JoinColumn({ name: 'activityId' })
   activity: Activity;
 

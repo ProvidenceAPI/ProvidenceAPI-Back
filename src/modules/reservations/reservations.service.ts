@@ -294,7 +294,6 @@ export class ReservationsService {
     }
     await this.reservationRepo.save(activeReservations);
     await this.turnsService.cancelTurn(turnId);
-
     let emailsSent = 0;
     let emailsFailed = 0;
 
@@ -304,11 +303,9 @@ export class ReservationsService {
           reservation.activityDate instanceof Date
             ? reservation.activityDate
             : new Date(reservation.activityDate);
-
         this.logger.log(
           `📧 Enviando notificación de turno cancelado a ${reservation.user.email}`,
         );
-
         await this.mailService.sendTurnCancellationNotification(
           reservation.user.email,
           {
@@ -329,7 +326,6 @@ export class ReservationsService {
               'http://localhost:3001',
           },
         );
-
         this.logger.log(
           `✅ Notificación de turno cancelado enviada a ${reservation.user.email}`,
         );
@@ -372,15 +368,12 @@ export class ReservationsService {
       },
       relations: ['turn'],
     });
-
     for (const reservation of activeReservations) {
       reservation.status = ReservationStatus.cancelled;
-
       if (reservation.turnId) {
         await this.turnsService.incrementAvailableSpots(reservation.turnId);
       }
     }
-
     await this.reservationRepo.save(activeReservations);
   }
 
@@ -479,22 +472,18 @@ export class ReservationsService {
       where: { id: reservationId },
       relations: ['user', 'turn', 'activity'],
     });
-
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }
-
     const newUser = await this.userRepository.findOne({
       where: { id: userId },
     });
     if (!newUser) {
       throw new NotFoundException('User not found');
     }
-
     if (newUser.status === UserStatus.banned) {
       throw new ForbiddenException('Cannot assign reservation to banned user');
     }
-
     if (newUser.status === UserStatus.cancelled) {
       throw new ForbiddenException(
         'Cannot assign reservation to cancelled user',
@@ -508,16 +497,13 @@ export class ReservationsService {
         status: ReservationStatus.confirmed,
       },
     });
-
     if (existingReservation && existingReservation.id !== reservationId) {
       throw new ConflictException(
         'User already has a reservation for this turn',
       );
     }
-
     const oldUser = reservation.user;
     reservation.user = newUser;
-
     const updatedReservation = await this.reservationRepo.save(reservation);
 
     try {
@@ -525,11 +511,9 @@ export class ReservationsService {
         reservation.activityDate instanceof Date
           ? reservation.activityDate
           : new Date(reservation.activityDate);
-
       this.logger.log(
         `📧 Enviando correo de confirmación de reserva reasignada a ${newUser.email}`,
       );
-
       await this.mailService.sendReservationConfirmation(newUser.email, {
         userName: newUser.name,
         activityName: reservation.turn.activity.name,
@@ -547,7 +531,6 @@ export class ReservationsService {
           this.configService.get<string>('FRONTEND_URL') ||
           'http://localhost:3001',
       });
-
       this.logger.log(
         `✅ Correo de confirmación enviado exitosamente a ${newUser.email}`,
       );
@@ -558,18 +541,15 @@ export class ReservationsService {
         error?.stack,
       );
     }
-
     if (oldUser.id !== newUser.id) {
       try {
         const activityDate =
           reservation.activityDate instanceof Date
             ? reservation.activityDate
             : new Date(reservation.activityDate);
-
         this.logger.log(
           `📧 Enviando correo de cancelación de reserva reasignada a ${oldUser.email}`,
         );
-
         await this.mailService.sendReservationCancellation(oldUser.email, {
           userName: oldUser.name,
           activityName: reservation.turn.activity.name,
@@ -587,7 +567,6 @@ export class ReservationsService {
             this.configService.get<string>('FRONTEND_URL') ||
             'http://localhost:3001',
         });
-
         this.logger.log(
           `✅ Correo de cancelación enviado exitosamente a ${oldUser.email}`,
         );
@@ -599,7 +578,6 @@ export class ReservationsService {
         );
       }
     }
-
     return updatedReservation;
   }
 
@@ -611,11 +589,9 @@ export class ReservationsService {
       where: { id: reservationId },
       relations: ['user', 'turn', 'turn.activity', 'activity'],
     });
-
     if (!reservation) {
       throw new NotFoundException('Reservation not found');
     }
-
     if (reservation.status === ReservationStatus.cancelled) {
       throw new BadRequestException(
         'Cannot change turn of a cancelled reservation',
@@ -623,23 +599,19 @@ export class ReservationsService {
     }
 
     const newTurn = await this.turnsService.findOne(newTurnId);
-
     if (!newTurn) {
       throw new NotFoundException('Turn not found');
     }
-
     if (newTurn.status === TurnStatus.cancelled) {
       throw new BadRequestException(
         'Cannot assign reservation to a cancelled turn',
       );
     }
-
     if (newTurn.status === TurnStatus.completed) {
       throw new BadRequestException(
         'Cannot assign reservation to a completed turn',
       );
     }
-
     if (newTurn.availableSpots <= 0) {
       throw new BadRequestException('No available spots for this turn');
     }
@@ -651,44 +623,36 @@ export class ReservationsService {
         status: ReservationStatus.confirmed,
       },
     });
-
     if (existingReservation && existingReservation.id !== reservationId) {
       throw new ConflictException(
         'User already has a reservation for this turn',
       );
     }
-
     const oldTurn = reservation.turn;
     const oldActivityName =
       oldTurn?.activity?.name ||
       reservation.activity?.name ||
       'Actividad anterior';
-
     if (oldTurn) {
       await this.turnsService.incrementAvailableSpots(oldTurn.id);
     }
-
     reservation.turnId = newTurnId;
     reservation.turn = newTurn;
     reservation.activityId = newTurn.activityId;
-
     reservation.activityDate =
       newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
     reservation.startTime = newTurn.startTime;
     reservation.endTime = newTurn.endTime;
 
     await this.turnsService.decrementAvailableSpots(newTurnId);
-
-    const updatedReservation = await this.reservationRepo.save(reservation);
+    await this.reservationRepo.save(reservation);
 
     try {
       const newTurnDate =
         newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
-
       this.logger.log(
         `📧 Enviando correo de confirmación de cambio de turno a ${reservation.user.email}`,
       );
-
       await this.mailService.sendReservationConfirmation(
         reservation.user.email,
         {
@@ -709,7 +673,6 @@ export class ReservationsService {
             'http://localhost:3001',
         },
       );
-
       this.logger.log(
         `✅ Correo de confirmación de cambio de turno enviado exitosamente a ${reservation.user.email}`,
       );
@@ -729,7 +692,6 @@ export class ReservationsService {
         : reservation.activityDate instanceof Date
           ? reservation.activityDate
           : new Date(reservation.activityDate);
-
       this.logger.log(
         `📧 Enviando correo de cancelación de turno anterior a ${reservation.user.email}`,
       );
@@ -754,7 +716,6 @@ export class ReservationsService {
             'http://localhost:3001',
         },
       );
-
       this.logger.log(
         `✅ Correo de cancelación de turno anterior enviado exitosamente a ${reservation.user.email}`,
       );
@@ -765,7 +726,13 @@ export class ReservationsService {
         error?.stack,
       );
     }
-
+    const updatedReservation = await this.reservationRepo.findOne({
+      where: { id: reservationId },
+      relations: ['user', 'turn', 'turn.activity', 'activity'],
+    });
+    if (!updatedReservation) {
+      throw new NotFoundException('Reservation not found after update');
+    }
     return updatedReservation;
   }
 }

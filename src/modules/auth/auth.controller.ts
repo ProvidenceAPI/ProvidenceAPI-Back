@@ -83,11 +83,8 @@ export class AuthController {
   @Get('google/login/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginCallback(@Req() req, @Res() res: Response) {
-    const result = await this.authService.googleLogin(req.user);
-
-    res.redirect(
-      `${process.env.FRONTEND_URL}/auth/callback?token=${result.access_token}`,
-    );
+    const result = await this.authService.handleGoogleCallback(req.user);
+    return res.redirect(result.redirectUrl);
   }
 
   @Get('me')

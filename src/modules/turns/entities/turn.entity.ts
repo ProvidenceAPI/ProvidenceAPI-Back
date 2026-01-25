@@ -94,7 +94,7 @@ export class Turn {
     type: () => Activity,
     description: 'Activity associated with this turn',
   })
-  @ManyToOne(() => Activity, { eager: true })
+  @ManyToOne(() => Activity, (activity) => activity.turns, { eager: true })
   @JoinColumn({ name: 'activityId' })
   activity: Activity;
 
