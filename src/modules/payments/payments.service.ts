@@ -262,25 +262,14 @@ export class PaymentsService {
   async getMyPayments(userId: string) {
     return await this.paymentRepository.find({
       where: { user: { id: userId } },
-      relations: [
-        'activity',
-        'reservation',
-        'subscriptions',
-        'subscriptions.activity',
-      ],
+      relations: ['activity', 'reservation', 'user'],
       order: { createdAt: 'DESC' },
     });
   }
 
   async getAllPayments() {
     return await this.paymentRepository.find({
-      relations: [
-        'activity',
-        'reservation',
-        'user',
-        'subscriptions',
-        'subscriptions.activity',
-      ],
+      relations: ['activity', 'reservation', 'user'],
       order: { createdAt: 'DESC' },
     });
   }
