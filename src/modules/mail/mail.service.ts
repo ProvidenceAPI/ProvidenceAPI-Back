@@ -25,9 +25,17 @@ export class MailService {
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
+      requireTLS: true,
       auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASSWORD,
+      },
+      connectionTimeout: 10000, 
+      greetingTimeout: 10000, 
+      socketTimeout: 10000, 
+      tls: {
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false, 
       },
     });
 
