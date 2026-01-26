@@ -21,23 +21,16 @@ export class MailService {
   private readonly templatesPath: string;
 
   constructor() {
+    const isProduction = process.env.NODE_ENV === 'production';
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+      host: isProduction ? 'smtp-relay.brevo.com' : 'smtp.gmail.com',
       port: 587,
       secure: false,
-      requireTLS: true,
       auth: {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASSWORD,
       },
-      connectionTimeout: 10000, 
-      greetingTimeout: 10000, 
-      socketTimeout: 10000, 
-      tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false, 
-      },
-    });
+      });
 
     this.templatesPath = this.resolveTemplatesPath();
 
