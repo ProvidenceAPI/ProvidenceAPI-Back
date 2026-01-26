@@ -83,6 +83,7 @@ async function run() {
           paymentDate: '15 de enero de 2026',
           paymentMethod: 'MercadoPago',
           transactionId: 'MP-123456',
+          description: 'Pago de suscripción mensual',
           reservationDate: 'N/A',
           reservationTime: 'N/A',
           frontendUrl: FRONTEND_URL,
@@ -114,7 +115,7 @@ async function run() {
     {
       name: 'Turn Cancellation (Turno cancelado)',
       fn: () =>
-        mail.sendTurnCancellationNotification(to, {
+        mail.sendReservationCancellation(to, {
           userName: 'Usuario Prueba',
           activityName: 'Yoga',
           turnDate: '15/1/2026',

@@ -229,6 +229,9 @@ export class PaymentsService {
         }),
         paymentMethod: 'MercadoPago',
         transactionId: payment.mercadoPagoId,
+        description: payment.reservation
+          ? `Pago de clase - ${payment.reservation?.turn?.activity?.name}`
+          : 'Pago de suscripción mensual',
         reservationDate: payment.reservation
           ? payment.reservation.activityDate.toLocaleDateString('es-ES', {
               weekday: 'long',

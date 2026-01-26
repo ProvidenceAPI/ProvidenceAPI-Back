@@ -20,6 +20,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeorm],
+      envFilePath: '.env.development',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
