@@ -93,7 +93,7 @@ export class Subscription {
     type: () => Payment,
     description: 'The payment associated with the subscription',
   })
-  @ManyToOne(() => Payment, (payment) => payment.subscription, {
+  @ManyToOne(() => Payment, {
     nullable: true,
   })
   @JoinColumn({ name: 'paymentId' })

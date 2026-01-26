@@ -87,8 +87,4 @@ export class Payment {
   @ManyToOne(() => Activity, { nullable: true })
   @JoinColumn({ name: 'activityId' })
   activity: Activity | null;
-
-  @ApiProperty({ type: () => Subscription, isArray: true })
-  @OneToMany(() => Subscription, (subscription) => subscription.payment)
-  subscription?: Subscription[];
 }
