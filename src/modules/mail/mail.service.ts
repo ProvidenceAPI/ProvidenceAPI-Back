@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import { getMailConfig } from './mail.config';
 import {
   MailOptions,
@@ -19,15 +20,26 @@ import * as path from 'path';
 @Injectable()
 export class MailService {
   private transporter: Transporter;
+  private resend: Resend;
   private readonly logger = new Logger(MailService.name);
   private readonly templatesPath: string;
+  private readonly mailConfig: any;
+  private readonly isResend: boolean;
 
   constructor(private readonly configService: ConfigService) {
-    const mailConfig = getMailConfig(configService);
-    this.transporter = nodemailer.createTransport(mailConfig);
-    this.templatesPath = this.resolveTemplatesPath();
+    this.mailConfig = getMailConfig(configService);
+    this.isResend = this.mailConfig.provider === 'resend';
 
-    this.verifyConnection();
+    if (this.isResend) {
+      this.resend = new Resend(this.mailConfig.apiKey);
+      this.logger.log('✅ Mail service initialized with Resend');
+    } else {
+      this.transporter = nodemailer.createTransport(this.mailConfig);
+      this.logger.log('✅ Mail service initialized with SMTP');
+      this.verifyConnection();
+    }
+
+    this.templatesPath = this.resolveTemplatesPath();
   }
 
   private resolveTemplatesPath(): string {
@@ -99,29 +111,54 @@ export class MailService {
   }
 
   private async sendMail(options: MailOptions): Promise<void> {
-    const user = this.configService.get<string>('MAIL_USER');
-    const pass = this.configService.get<string>('MAIL_PASSWORD');
+    // Validación para SMTP
+    if (!this.isResend) {
+      const user = this.configService.get<string>('MAIL_USER');
+      const pass = this.configService.get<string>('MAIL_PASSWORD');
 
-    if (!user || !pass) {
-      this.logger.warn(
-        `⚠️ Mail no configurado (MAIL_USER/MAIL_PASSWORD faltantes). No se puede enviar correo a ${options.to}`,
-      );
-      throw new Error(
-        'Mail service not configured. MAIL_USER and MAIL_PASSWORD are required.',
-      );
+      if (!user || !pass) {
+        this.logger.warn(
+          `⚠️ Mail no configurado (MAIL_USER/MAIL_PASSWORD faltantes). No se puede enviar correo a ${options.to}`,
+        );
+        throw new Error(
+          'Mail service not configured. MAIL_USER and MAIL_PASSWORD are required.',
+        );
+      }
     }
 
     try {
-      const mailOptions = {
-        from: `Providence Fitness <${this.configService.get('MAIL_FROM') || user}>`,
-        to: options.to,
-        subject: options.subject,
-        html: options.html,
-        attachments: options.attachments,
-      };
+      if (this.isResend) {
+        // Enviar con Resend
+        const result = await this.resend.emails.send({
+          from: `${this.mailConfig.from.name} <${this.mailConfig.from.address}>`,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+        });
 
-      const info = await this.transporter.sendMail(mailOptions);
-      this.logger.log(`✅ Email sent to ${options.to}: ${info.messageId}`);
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+
+        this.logger.log(
+          `✅ Email sent via Resend to ${options.to}: ${result.data?.id}`,
+        );
+      } else {
+        // Enviar con SMTP
+        const user = this.configService.get<string>('MAIL_USER');
+        const mailOptions = {
+          from: `Providence Fitness <${this.configService.get('MAIL_FROM') || user}>`,
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+          attachments: options.attachments,
+        };
+
+        const info = await this.transporter.sendMail(mailOptions);
+        this.logger.log(
+          `✅ Email sent via SMTP to ${options.to}: ${info.messageId}`,
+        );
+      }
     } catch (error: any) {
       this.logger.error(
         `❌ Failed to send email to ${options.to}:`,
@@ -147,6 +184,10 @@ export class MailService {
     email: string,
     data: ReservationConfirmationData,
   ): Promise<void> {
+    this.logger.log(
+      `📧 Enviando correo de confirmación de reserva a ${email} para actividad ${data.activityName}`,
+    );
+
     const template = this.loadTemplate('reservation-confirmation');
     const html = this.replaceVariables(template, data);
 
