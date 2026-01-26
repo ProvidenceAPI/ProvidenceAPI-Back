@@ -20,6 +20,7 @@ export interface WelcomeEmailData {
 export interface ReservationConfirmationData {
   userName: string;
   activityName: string;
+  activityImage?: string;
   turnDate: string;
   turnTime: string;
   endTime: string;
@@ -35,6 +36,7 @@ export interface PaymentConfirmationData {
   paymentDate: string;
   paymentMethod: string;
   transactionId?: string;
+  description: string;
   reservationDate: string;
   reservationTime: string;
   frontendUrl: string;

@@ -298,7 +298,7 @@ export class ReservationsService {
         this.logger.log(
           `📧 Enviando notificación de turno cancelado a ${reservation.user.email}`,
         );
-        await this.mailService.sendTurnCancellationNotification(
+        await this.mailService.sendReservationCancellation(
           reservation.user.email,
           {
             userName: reservation.user.name,
