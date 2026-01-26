@@ -125,7 +125,7 @@ export class SubscriptionsService {
     if (isFreeTrial) {
       const hasUsedFreeTrial = await this.hasUsedFreeTrial(userId);
       if (hasUsedFreeTrial)
-        throw new BadRequestException('Ya has usado tu prueba gratis');
+        throw new BadRequestException('You have already used your free trial');
     }
     const startDate = new Date();
     const expirationDate = new Date();
