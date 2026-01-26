@@ -65,9 +65,9 @@ export class PaymentsService {
           },
         ],
         back_urls: {
-          success: `${this.configService.get('FRONTEND_URL')}/payment/success`,
-          failure: `${this.configService.get('FRONTEND_URL')}/payment/failure`,
-          pending: `${this.configService.get('FRONTEND_URL')}/payment/pending`,
+          success: `${this.configService.get('FRONTEND_URL')}/mis-pagos?status=approved`,
+          failure: `${this.configService.get('FRONTEND_URL')}/mis-pagos?status=rejected`,
+          pending: `${this.configService.get('FRONTEND_URL')}/mis-pagos?status=pending`,
         },
         notification_url: `${this.configService.get('PUBLIC_API_URL')}/api/payments/webhook`,
         metadata: {
@@ -262,12 +262,25 @@ export class PaymentsService {
   async getMyPayments(userId: string) {
     return await this.paymentRepository.find({
       where: { user: { id: userId } },
+      relations: [
+        'activity',
+        'reservation',
+        'subscriptions',
+        'subscriptions.activity',
+      ],
       order: { createdAt: 'DESC' },
     });
   }
 
   async getAllPayments() {
     return await this.paymentRepository.find({
+      relations: [
+        'activity',
+        'reservation',
+        'user',
+        'subscriptions',
+        'subscriptions.activity',
+      ],
       order: { createdAt: 'DESC' },
     });
   }
