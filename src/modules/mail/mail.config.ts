@@ -15,5 +15,15 @@ export const getMailConfig = (configService: ConfigService) => {
         configService.get<string>('MAIL_FROM') ||
         'noreply@providencefitness.com',
     },
+    tls: {
+      rejectUnauthorized: false,
+      ciphers: 'SSLv3',
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+
+    logger: true,
+    debug: configService.get<string>('NODE_ENV') !== 'production',
   };
 };
