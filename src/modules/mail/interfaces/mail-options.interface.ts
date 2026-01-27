@@ -5,7 +5,10 @@ export interface MailOptions {
   attachments?: Array<{
     filename: string;
     path?: string;
-    content?: Buffer;
+    content?: Buffer | string;
+    type?: string;
+    disposition?: 'inline' | 'attachment';
+    content_id?: string;
   }>;
 }
 
@@ -15,6 +18,11 @@ export interface WelcomeEmailData {
   userPhone: string;
   userDNI: string;
   frontendUrl: string;
+  logoUrl?: string;
+  welcomeImageUrl?: string;
+  facebookIconUrl?: string;
+  instagramIconUrl?: string;
+  xIconUrl?: string;
 }
 
 export interface ReservationConfirmationData {
