@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   Req,
   UploadedFile,
   UseGuards,
@@ -162,6 +163,21 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   getUserStats() {
     return this.userService.getUserStats();
+  }
+
+  @Get('check-availability')
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles(Rol.admin, Rol.superAdmin)
+  @ApiOperation({ summary: 'Check if email, DNI or phone are already taken' })
+  @ApiResponse({ status: 200, description: '{ emailTaken, dniTaken, phoneTaken }' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  checkAvailability(
+    @Query('email') email?: string,
+    @Query('dni') dni?: string,
+    @Query('phone') phone?: string,
+  ) {
+    return this.userService.checkAvailability(email, dni, phone);
   }
 
   @Get(':id')
