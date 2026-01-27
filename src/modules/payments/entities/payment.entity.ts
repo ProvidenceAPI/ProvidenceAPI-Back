@@ -84,7 +84,10 @@ export class Payment {
   reservation: Reservation;
 
   @ApiProperty({ type: () => Activity })
-  @ManyToOne(() => Activity, { nullable: true })
+  @ManyToOne(() => Activity, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'activityId' })
   activity: Activity | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  activityId: string | null;
 }
