@@ -19,6 +19,9 @@ export interface CreatePreferenceDto {
   auto_return?: 'approved' | 'all';
   notification_url?: string;
   metadata?: Record<string, any>;
+  statement_descriptor?: string;
+  external_reference?: string;
+  expires?: boolean;
 }
 
 @Injectable()
@@ -43,6 +46,7 @@ export class MercadoPagoService {
             ...item,
           })),
           back_urls: data.back_urls,
+          auto_return: data.auto_return || 'approved',
           notification_url: data.notification_url,
           metadata: data.metadata,
           payment_methods: {

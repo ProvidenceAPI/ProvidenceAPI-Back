@@ -52,7 +52,7 @@ export class PaymentsService {
       reservation: undefined,
       status: PaymentStatus.pending,
       dueDate,
-      activity: { id: activity.id },
+      activity: activity,
     });
     const savedPayment = await this.paymentRepository.save(payment);
     try {
@@ -69,6 +69,7 @@ export class PaymentsService {
           failure: `${this.configService.get('FRONTEND_URL')}/mis-pagos?status=rejected`,
           pending: `${this.configService.get('FRONTEND_URL')}/mis-pagos?status=pending`,
         },
+        auto_return: 'approved',
         notification_url: `${this.configService.get('PUBLIC_API_URL')}/api/payments/webhook`,
         metadata: {
           user_id: userId,
