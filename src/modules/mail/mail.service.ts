@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import {
   MailOptions,
   WelcomeEmailData,
@@ -17,29 +18,34 @@ import * as path from 'path';
 @Injectable()
 export class MailService {
   private transporter: Transporter;
+  private resend: Resend;
   private readonly logger = new Logger(MailService.name);
   private readonly templatesPath: string;
+  private readonly isProduction: boolean;
 
   constructor() {
-    const nodeEnv = (process.env.NODE_ENV || '').toLowerCase();
-    const isProduction = nodeEnv === 'production';
-
-    this.transporter = nodemailer.createTransport({
-      host: isProduction ? 'smtp-relay.brevo.com' : 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASSWORD,
-      },
-    });
-
-    console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
-    console.log('🔍 isProduction:', isProduction);
-    console.log('🔍 Mail Host:', isProduction ? 'Brevo' : 'Gmail');
+    this.isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+    
+    if (this.isProduction) {
+      // Resend API para producción (Render)
+      this.logger.log('📧 Initializing Resend API for production');
+      this.resend = new Resend(process.env.RESEND_API_KEY);
+    } else {
+      // Gmail SMTP para desarrollo local
+      this.logger.log('📧 Initializing Gmail SMTP for development');
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASSWORD,
+        },
+      });
+      this.verifyConnection();
+    }
 
     this.templatesPath = this.resolveTemplatesPath();
-    this.verifyConnection();
   }
 
   private resolveTemplatesPath(): string {
@@ -110,6 +116,16 @@ export class MailService {
   }
 
   private async sendMail(options: MailOptions): Promise<void> {
+    if (this.isProduction) {
+      // Enviar con Resend API
+      return this.sendMailWithResend(options);
+    } else {
+      // Enviar con Gmail SMTP
+      return this.sendMailWithGmail(options);
+    }
+  }
+
+  private async sendMailWithGmail(options: MailOptions): Promise<void> {
     if (!process.env.MAIL_USER || !process.env.MAIL_PASSWORD) {
       this.logger.warn(
         `⚠️ Mail not configured. Cannot send email to ${options.to}`,
@@ -129,7 +145,7 @@ export class MailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      this.logger.log(`✅ Email sent to ${options.to}: ${info.messageId}`);
+      this.logger.log(`✅ Email sent via Gmail to ${options.to}: ${info.messageId}`);
     } catch (error: any) {
       this.logger.error(
         `❌ Failed to send email to ${options.to}:`,
@@ -138,6 +154,40 @@ export class MailService {
       throw error;
     }
   }
+
+  private async sendMailWithResend(options: MailOptions): Promise<void> {
+    if (!process.env.RESEND_API_KEY) {
+      this.logger.warn(
+        `⚠️ Resend API key not configured. Cannot send email to ${options.to}`,
+      );
+      throw new Error('RESEND_API_KEY is required in production.');
+    }
+
+    try {
+      const result = await this.resend.emails.send({
+        from: 'Providence Fitness <onboarding@resend.dev>',
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      this.logger.log(`✅ Email sent via Resend to ${options.to}: ${result.data?.id}`);
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed to send email via Resend to ${options.to}:`,
+        error?.message || error,
+      );
+      throw error;
+    }
+  }
+
+  // ==========================================
+  // EMAILS DE AUTENTICACIÓN
+  // ==========================================
 
   async sendWelcomeEmail(email: string, data: WelcomeEmailData): Promise<void> {
     this.logger.log(`📧 Sending welcome email to ${email}`);
@@ -150,6 +200,10 @@ export class MailService {
       html,
     });
   }
+
+  // ==========================================
+  // EMAILS DE RESERVAS
+  // ==========================================
 
   async sendReservationConfirmation(
     email: string,
@@ -187,6 +241,18 @@ export class MailService {
     });
   }
 
+  // Alias para compatibilidad
+  async sendTurnCancellationNotification(
+    email: string,
+    data: TurnCancellationData,
+  ): Promise<void> {
+    return this.sendReservationCancellation(email, data);
+  }
+
+  // ==========================================
+  // EMAILS DE PAGOS
+  // ==========================================
+
   async sendPaymentConfirmation(
     email: string,
     data: PaymentConfirmationData,
@@ -216,6 +282,10 @@ export class MailService {
     });
   }
 
+  // ==========================================
+  // EMAILS DE RECORDATORIOS
+  // ==========================================
+
   async sendTurnReminder(email: string, data: TurnReminderData): Promise<void> {
     this.logger.log(`📧 Sending turn reminder to ${email}`);
 
@@ -228,6 +298,10 @@ export class MailService {
       html,
     });
   }
+
+  // ==========================================
+  // EMAILS ADMINISTRATIVOS
+  // ==========================================
 
   async sendAdminNotification(
     email: string,
@@ -244,6 +318,10 @@ export class MailService {
       html,
     });
   }
+
+  // ==========================================
+  // ENVÍO MASIVO
+  // ==========================================
 
   async sendBulkEmails(
     emails: string[],
