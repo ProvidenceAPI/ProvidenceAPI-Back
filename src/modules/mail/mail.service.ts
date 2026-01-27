@@ -21,7 +21,9 @@ export class MailService {
   private readonly templatesPath: string;
 
   constructor() {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const nodeEnv = (process.env.NODE_ENV || '').toLowerCase();
+    const isProduction = nodeEnv === 'production';
+
     this.transporter = nodemailer.createTransport({
       host: isProduction ? 'smtp-relay.brevo.com' : 'smtp.gmail.com',
       port: 587,
@@ -30,10 +32,13 @@ export class MailService {
         user: process.env.MAIL_USER,
         pass: process.env.MAIL_PASSWORD,
       },
-      });
+    });
+
+    console.log('🔍 NODE_ENV:', process.env.NODE_ENV);
+    console.log('🔍 isProduction:', isProduction);
+    console.log('🔍 Mail Host:', isProduction ? 'Brevo' : 'Gmail');
 
     this.templatesPath = this.resolveTemplatesPath();
-
     this.verifyConnection();
   }
 
