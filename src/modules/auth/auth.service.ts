@@ -118,16 +118,6 @@ export class AuthService {
   }
 
   private async sendWelcomeEmailAsync(user: User): Promise<void> {
-    const mailUser = this.configService.get<string>('MAIL_USER');
-    const mailPassword = this.configService.get<string>('MAIL_PASSWORD');
-
-    if (!mailUser || !mailPassword) {
-      this.logger.warn(
-        `⚠️ Mail not configured (MAIL_USER/MAIL_PASSWORD missing). Welcome email NOT sent to ${user.email}`,
-      );
-      return;
-    }
-
     try {
       this.logger.log(`📧 Attempting to send welcome email to ${user.email}`);
 
