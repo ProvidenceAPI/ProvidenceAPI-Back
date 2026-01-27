@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
-import { Resend } from 'resend';
+import * as sgMail from '@sendgrid/mail';
 import {
   MailOptions,
   WelcomeEmailData,
@@ -18,7 +18,6 @@ import * as path from 'path';
 @Injectable()
 export class MailService {
   private transporter: Transporter;
-  private resend: Resend;
   private readonly logger = new Logger(MailService.name);
   private readonly templatesPath: string;
   private readonly isProduction: boolean;
@@ -27,11 +26,16 @@ export class MailService {
     this.isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production';
     
     if (this.isProduction) {
-      // Resend API para producción (Render)
-      this.logger.log('📧 Initializing Resend API for production');
-      this.resend = new Resend(process.env.RESEND_API_KEY);
+
+      this.logger.log('📧 Initializing SendGrid API for production');
+      const apiKey = process.env.SENDGRID_API_KEY;
+      if (!apiKey) {
+        this.logger.error('⚠️ SENDGRID_API_KEY not configured in production!');
+      } else {
+        sgMail.setApiKey(apiKey);
+      }
     } else {
-      // Gmail SMTP para desarrollo local
+
       this.logger.log('📧 Initializing Gmail SMTP for development');
       this.transporter = nodemailer.createTransport({
         host: 'smtp.gmail.com',
@@ -117,10 +121,10 @@ export class MailService {
 
   private async sendMail(options: MailOptions): Promise<void> {
     if (this.isProduction) {
-      // Enviar con Resend API
-      return this.sendMailWithResend(options);
+
+      return this.sendMailWithSendGrid(options);
     } else {
-      // Enviar con Gmail SMTP
+
       return this.sendMailWithGmail(options);
     }
   }
@@ -155,39 +159,35 @@ export class MailService {
     }
   }
 
-  private async sendMailWithResend(options: MailOptions): Promise<void> {
-    if (!process.env.RESEND_API_KEY) {
+  private async sendMailWithSendGrid(options: MailOptions): Promise<void> {
+    if (!process.env.SENDGRID_API_KEY) {
       this.logger.warn(
-        `⚠️ Resend API key not configured. Cannot send email to ${options.to}`,
+        `⚠️ SendGrid API key not configured. Cannot send email to ${options.to}`,
       );
-      throw new Error('RESEND_API_KEY is required in production.');
+      throw new Error('SENDGRID_API_KEY is required in production.');
     }
 
     try {
-      const result = await this.resend.emails.send({
-        from: 'Providence Fitness <onboarding@resend.dev>',
+      const msg = {
         to: options.to,
+        from: {
+          email: process.env.SENDGRID_FROM_EMAIL || 'providenceapi@gmail.com',
+          name: 'Providence Fitness',
+        },
         subject: options.subject,
         html: options.html,
-      });
+      };
 
-      if (result.error) {
-        throw new Error(result.error.message);
-      }
-
-      this.logger.log(`✅ Email sent via Resend to ${options.to}: ${result.data?.id}`);
+      const result = await sgMail.send(msg);
+      this.logger.log(`✅ Email sent via SendGrid to ${options.to}: ${result[0].statusCode}`);
     } catch (error: any) {
       this.logger.error(
-        `❌ Failed to send email via Resend to ${options.to}:`,
-        error?.message || error,
+        `❌ Failed to send email via SendGrid to ${options.to}:`,
+        error?.message || error?.response?.body || error,
       );
       throw error;
     }
   }
-
-  // ==========================================
-  // EMAILS DE AUTENTICACIÓN
-  // ==========================================
 
   async sendWelcomeEmail(email: string, data: WelcomeEmailData): Promise<void> {
     this.logger.log(`📧 Sending welcome email to ${email}`);
@@ -200,10 +200,6 @@ export class MailService {
       html,
     });
   }
-
-  // ==========================================
-  // EMAILS DE RESERVAS
-  // ==========================================
 
   async sendReservationConfirmation(
     email: string,
@@ -241,17 +237,12 @@ export class MailService {
     });
   }
 
-  // Alias para compatibilidad
   async sendTurnCancellationNotification(
     email: string,
     data: TurnCancellationData,
   ): Promise<void> {
     return this.sendReservationCancellation(email, data);
   }
-
-  // ==========================================
-  // EMAILS DE PAGOS
-  // ==========================================
 
   async sendPaymentConfirmation(
     email: string,
@@ -282,10 +273,6 @@ export class MailService {
     });
   }
 
-  // ==========================================
-  // EMAILS DE RECORDATORIOS
-  // ==========================================
-
   async sendTurnReminder(email: string, data: TurnReminderData): Promise<void> {
     this.logger.log(`📧 Sending turn reminder to ${email}`);
 
@@ -299,11 +286,7 @@ export class MailService {
     });
   }
 
-  // ==========================================
-  // EMAILS ADMINISTRATIVOS
-  // ==========================================
-
-  async sendAdminNotification(
+   async sendAdminNotification(
     email: string,
     data: AdminNotificationData,
   ): Promise<void> {
@@ -318,11 +301,6 @@ export class MailService {
       html,
     });
   }
-
-  // ==========================================
-  // ENVÍO MASIVO
-  // ==========================================
-
   async sendBulkEmails(
     emails: string[],
     subject: string,
