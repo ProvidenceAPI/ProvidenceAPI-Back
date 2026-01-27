@@ -136,10 +136,7 @@ export class MailService {
     return result;
   }
 
-  /**
-   * Carga imágenes desde assets/email para incrustarlas inline en SendGrid.
-   * Si todas existen, devuelve adjuntos y datos con cid:; si no, null.
-   */
+  
   private loadWelcomeInlineAttachments(): {
     attachments: NonNullable<MailOptions['attachments']>;
     dataOverrides: Partial<WelcomeEmailData>;
@@ -178,11 +175,7 @@ export class MailService {
     return { attachments, dataOverrides };
   }
 
-  /**
-   * Punto único de envío: en producción usa SendGrid; en desarrollo usa Gmail.
-   * Todos los correos (welcome, reservas, pagos, recordatorios, admin, etc.)
-   * pasan por aquí.
-   */
+  
   private async sendMail(options: MailOptions): Promise<void> {
     if (this.isProduction) {
       return this.sendMailWithSendGrid(options);
