@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import {
   MailOptions,
   WelcomeEmailData,
@@ -19,21 +20,36 @@ export class MailService {
   private transporter: Transporter;
   private readonly logger = new Logger(MailService.name);
   private readonly templatesPath: string;
+  private readonly isProduction: boolean;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASSWORD,
-      },
-    });
+    this.isProduction = (process.env.NODE_ENV || '').toLowerCase() === 'production';
+    
+    if (this.isProduction) {
+
+      this.logger.log('📧 Initializing SendGrid API for production');
+      const apiKey = process.env.SENDGRID_API_KEY;
+      if (!apiKey) {
+        this.logger.error('⚠️ SENDGRID_API_KEY not configured in production!');
+      } else {
+        sgMail.setApiKey(apiKey);
+      }
+    } else {
+
+      this.logger.log('📧 Initializing Gmail SMTP for development');
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASSWORD,
+        },
+      });
+      this.verifyConnection();
+    }
 
     this.templatesPath = this.resolveTemplatesPath();
-
-    this.verifyConnection();
   }
 
   private resolveTemplatesPath(): string {
@@ -104,6 +120,16 @@ export class MailService {
   }
 
   private async sendMail(options: MailOptions): Promise<void> {
+    if (this.isProduction) {
+
+      return this.sendMailWithSendGrid(options);
+    } else {
+
+      return this.sendMailWithGmail(options);
+    }
+  }
+
+  private async sendMailWithGmail(options: MailOptions): Promise<void> {
     if (!process.env.MAIL_USER || !process.env.MAIL_PASSWORD) {
       this.logger.warn(
         `⚠️ Mail not configured. Cannot send email to ${options.to}`,
@@ -123,11 +149,41 @@ export class MailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      this.logger.log(`✅ Email sent to ${options.to}: ${info.messageId}`);
+      this.logger.log(`✅ Email sent via Gmail to ${options.to}: ${info.messageId}`);
     } catch (error: any) {
       this.logger.error(
         `❌ Failed to send email to ${options.to}:`,
         error?.message || error,
+      );
+      throw error;
+    }
+  }
+
+  private async sendMailWithSendGrid(options: MailOptions): Promise<void> {
+    if (!process.env.SENDGRID_API_KEY) {
+      this.logger.warn(
+        `⚠️ SendGrid API key not configured. Cannot send email to ${options.to}`,
+      );
+      throw new Error('SENDGRID_API_KEY is required in production.');
+    }
+
+    try {
+      const msg = {
+        to: options.to,
+        from: {
+          email: process.env.SENDGRID_FROM_EMAIL || 'providenceapi@gmail.com',
+          name: 'Providence Fitness',
+        },
+        subject: options.subject,
+        html: options.html,
+      };
+
+      const result = await sgMail.send(msg);
+      this.logger.log(`✅ Email sent via SendGrid to ${options.to}: ${result[0].statusCode}`);
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed to send email via SendGrid to ${options.to}:`,
+        error?.message || error?.response?.body || error,
       );
       throw error;
     }
@@ -181,6 +237,13 @@ export class MailService {
     });
   }
 
+  async sendTurnCancellationNotification(
+    email: string,
+    data: TurnCancellationData,
+  ): Promise<void> {
+    return this.sendReservationCancellation(email, data);
+  }
+
   async sendPaymentConfirmation(
     email: string,
     data: PaymentConfirmationData,
@@ -223,7 +286,7 @@ export class MailService {
     });
   }
 
-  async sendAdminNotification(
+   async sendAdminNotification(
     email: string,
     data: AdminNotificationData,
   ): Promise<void> {
@@ -238,7 +301,6 @@ export class MailService {
       html,
     });
   }
-
   async sendBulkEmails(
     emails: string[],
     subject: string,
