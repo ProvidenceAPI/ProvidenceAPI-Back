@@ -28,8 +28,9 @@ export class Testimonial {
   @ApiProperty({
     example: 'Boxer',
     description: 'Current profession',
+    default: 'Miembro',
   })
-  @Column('text')
+  @Column({ type: 'varchar', length: 20, nullable: true })
   profession: string;
 
   @ApiProperty({
@@ -47,4 +48,7 @@ export class Testimonial {
   @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'userId' })
   user: User;
+
+  @Column({ type: 'uuid' })
+  userId: string;
 }
