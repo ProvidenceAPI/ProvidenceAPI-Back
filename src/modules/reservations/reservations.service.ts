@@ -68,6 +68,12 @@ export class ReservationsService {
       turn.date instanceof Date
         ? turn.date.toISOString().split('T')[0]
         : turn.date;
+
+    const todayStr = now.toISOString().split('T')[0];
+    if (turnDate < todayStr) {
+      throw new BadRequestException('You cannot book a past date');
+    }
+
     const turnDateTime = new Date(`${turnDate}T${turn.startTime}`);
     const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
     if (turnDateTime < oneHourFromNow) {
