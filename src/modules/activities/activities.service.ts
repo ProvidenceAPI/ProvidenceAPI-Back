@@ -16,6 +16,7 @@ import { MailService } from '../mail/mail.service';
 import { UsersService } from '../users/users.service';
 import { ReservationStatus } from 'src/common/enum/reservations.enum';
 import { TurnStatus } from '../turns/entities/turn.entity';
+import { SubscriptionStatus } from 'src/common/enum/subscriptionStatus.enum';
 
 @Injectable()
 export class ActivitiesService {
@@ -207,10 +208,27 @@ export class ActivitiesService {
   async remove(id: string): Promise<{ message: string }> {
     const activity = await this.activityRepository.findOne({
       where: { id },
-      relations: ['turns', 'turns.reservations', 'turns.reservations.user'],
+      relations: {
+        turns: {
+          reservations: {
+            user: true,
+          },
+        },
+        subscriptions: true,
+      },
     });
     if (!activity) {
       throw new NotFoundException(`Activity with ID "${id}" not found`);
+    }
+    const hasActiveSubscriptions = activity.subscriptions?.some(
+      (sub) =>
+        sub.status === SubscriptionStatus.active &&
+        new Date(sub.expirationDate) > new Date(),
+    );
+    if (hasActiveSubscriptions) {
+      throw new BadRequestException(
+        'Cannot delete activity with active subscriptions. Wait for subscriptions to expire or cancel them first.',
+      );
     }
     const affectedUsers = new Set<{ email: string; name: string }>();
     const now = new Date();
@@ -223,7 +241,10 @@ export class ActivitiesService {
       );
       if (turnDateTime > now) {
         for (const reservation of turn.reservations || []) {
-          if (reservation.status === ReservationStatus.confirmed) {
+          if (
+            reservation.status === ReservationStatus.confirmed &&
+            !reservation.isFreeTrial
+          ) {
             affectedUsers.add({
               email: reservation.user.email,
               name: reservation.user.name,
@@ -232,11 +253,16 @@ export class ActivitiesService {
         }
       }
     }
+    if (activity.subscriptions && activity.subscriptions.length > 0) {
+      await this.activityRepository.manager.remove(activity.subscriptions);
+    }
     await this.activityRepository.remove(activity);
-    this.notifyUsersActivityDeleted(
-      Array.from(affectedUsers),
-      activity.name,
-    ).catch((err) => console.error('Background email error:', err));
+    if (affectedUsers.size > 0) {
+      this.notifyUsersActivityDeleted(
+        Array.from(affectedUsers),
+        activity.name,
+      ).catch((err) => console.error('Background email error:', err));
+    }
     return {
       message: `Activity "${activity.name}" has been deleted successfully`,
     };

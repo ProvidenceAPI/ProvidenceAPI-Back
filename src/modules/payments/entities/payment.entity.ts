@@ -5,12 +5,14 @@ import {
   ManyToOne,
   CreateDateColumn,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { User } from 'src/modules/users/entities/users.entity';
 import { PaymentStatus } from 'src/common/enum/paymentStatus.enum';
 import { Reservation } from 'src/modules/reservations/entities/reservations.entity';
 import { Activity } from 'src/modules/activities/entities/activity.entity';
 import { ApiProperty } from '@nestjs/swagger';
+import { Subscription } from 'src/modules/subscriptions/entities/subscriptions.entity';
 
 @Entity('payments')
 export class Payment {
@@ -82,7 +84,10 @@ export class Payment {
   reservation: Reservation;
 
   @ApiProperty({ type: () => Activity })
-  @ManyToOne(() => Activity, { nullable: true })
+  @ManyToOne(() => Activity, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'activityId' })
   activity: Activity | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  activityId: string | null;
 }

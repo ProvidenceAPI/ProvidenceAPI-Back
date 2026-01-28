@@ -118,18 +118,20 @@ export class AuthService {
   }
 
   private async sendWelcomeEmailAsync(user: User): Promise<void> {
-    const mailUser = this.configService.get<string>('MAIL_USER');
-    const mailPassword = this.configService.get<string>('MAIL_PASSWORD');
-
-    if (!mailUser || !mailPassword) {
-      this.logger.warn(
-        `⚠️ Mail not configured (MAIL_USER/MAIL_PASSWORD missing). Welcome email NOT sent to ${user.email}`,
-      );
-      return;
-    }
-
     try {
       this.logger.log(`📧 Attempting to send welcome email to ${user.email}`);
+
+      const imagesBase = this.configService.get<string>('MAIL_IMAGES_BASE_URL');
+      const defaultLogo =
+        'https://eyekwfc.stripocdn.email/content/guids/CABINET_244a3e1e0a19415b15c4a1f890ecc2695d36fa1f67537bb8fd41784de885a3ed/images/logo_actualzado.png';
+      const defaultWelcome =
+        'https://eyekwfc.stripocdn.email/content/guids/CABINET_e58281e79efa4826fb954d25a9c2fc9c708007582f274232a20a09158c6b84fc/images/istockphoto1369575748612x612_8QX.jpg';
+      const defaultFb =
+        'https://eyekwfc.stripocdn.email/content/assets/img/social-icons/rounded-black/facebook-rounded-black.png';
+      const defaultIg =
+        'https://eyekwfc.stripocdn.email/content/assets/img/social-icons/rounded-black/instagram-rounded-black.png';
+      const defaultX =
+        'https://eyekwfc.stripocdn.email/content/assets/img/social-icons/rounded-black/x-rounded-black.png';
 
       await this.mailservice.sendWelcomeEmail(user.email, {
         userName: user.name,
@@ -139,6 +141,11 @@ export class AuthService {
         frontendUrl:
           this.configService.get<string>('FRONTEND_URL') ||
           'http://localhost:3001',
+        logoUrl: imagesBase ? `${imagesBase}/logo.png` : defaultLogo,
+        welcomeImageUrl: imagesBase ? `${imagesBase}/welcome.jpg` : defaultWelcome,
+        facebookIconUrl: imagesBase ? `${imagesBase}/facebook.png` : defaultFb,
+        instagramIconUrl: imagesBase ? `${imagesBase}/instagram.png` : defaultIg,
+        xIconUrl: imagesBase ? `${imagesBase}/x.png` : defaultX,
       });
 
       this.logger.log(`✅ Welcome email sent successfully to ${user.email}`);
@@ -194,6 +201,14 @@ export class AuthService {
         genre: Genre.other,
       });
       await this.usersRepository.save(user);
+
+      const newUserEmail = user.email;
+      this.sendWelcomeEmailAsync(user).catch((error) => {
+        this.logger.error(
+          `Failed to send welcome email to ${newUserEmail} after Google signup`,
+          error?.stack || error,
+        );
+      });
     }
     if (user.status === UserStatus.banned) {
       throw new UnauthorizedException(

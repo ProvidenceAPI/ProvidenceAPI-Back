@@ -203,6 +203,25 @@ export class UsersService {
     return userWithoutPassword;
   }
 
+  async checkAvailability(
+    email?: string,
+    dni?: string,
+    phone?: string,
+  ): Promise<{ emailTaken: boolean; dniTaken: boolean; phoneTaken: boolean }> {
+    const [emailTaken, dniTaken, phoneTaken] = await Promise.all([
+      email?.trim()
+        ? this.userRepository.findOne({ where: { email: email.trim() } }).then((u) => !!u)
+        : Promise.resolve(false),
+      dni != null && String(dni).trim() !== ''
+        ? this.userRepository.findOne({ where: { dni: Number(dni) } }).then((u) => !!u)
+        : Promise.resolve(false),
+      phone?.trim()
+        ? this.userRepository.findOne({ where: { phone: phone.trim() } }).then((u) => !!u)
+        : Promise.resolve(false),
+    ]);
+    return { emailTaken, dniTaken, phoneTaken };
+  }
+
   async getUserStats() {
     const [total, active, inactive, banned] = await Promise.all([
       this.userRepository.count(),

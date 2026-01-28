@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
-import { getMailConfig } from './mail.config';
+import sgMail from '@sendgrid/mail';
 import {
   MailOptions,
   WelcomeEmailData,
@@ -21,13 +20,35 @@ export class MailService {
   private transporter: Transporter;
   private readonly logger = new Logger(MailService.name);
   private readonly templatesPath: string;
+  private readonly isProduction: boolean;
 
-  constructor(private readonly configService: ConfigService) {
-    const mailConfig = getMailConfig(configService);
-    this.transporter = nodemailer.createTransport(mailConfig);
+  constructor() {
+    this.isProduction =
+      (process.env.NODE_ENV || '').toLowerCase() === 'production';
+
+    if (this.isProduction) {
+      this.logger.log('📧 Initializing SendGrid API for production');
+      const apiKey = process.env.SENDGRID_API_KEY;
+      if (!apiKey) {
+        this.logger.error('⚠️ SENDGRID_API_KEY not configured in production!');
+      } else {
+        sgMail.setApiKey(apiKey);
+      }
+    } else {
+      this.logger.log('📧 Initializing Gmail SMTP for development');
+      this.transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASSWORD,
+        },
+      });
+      this.verifyConnection();
+    }
+
     this.templatesPath = this.resolveTemplatesPath();
-
-    this.verifyConnection();
   }
 
   private resolveTemplatesPath(): string {
@@ -54,17 +75,16 @@ export class MailService {
   }
 
   private async verifyConnection() {
-    const user = this.configService.get<string>('MAIL_USER');
-    const pass = this.configService.get<string>('MAIL_PASSWORD');
-    if (!user || !pass) {
+    if (!process.env.MAIL_USER || !process.env.MAIL_PASSWORD) {
       this.logger.warn(
-        'Mail not configured (MAIL_USER/MAIL_PASSWORD). Skipping verification. Emails will not be sent.',
+        '⚠️ Mail not configured (MAIL_USER/MAIL_PASSWORD missing). Emails will not be sent.',
       );
       return;
     }
+
     try {
       await this.transporter.verify();
-      this.logger.log('✅ Mail server connection established');
+      this.logger.log('✅ Mail server connection established with Gmail');
     } catch (error: any) {
       this.logger.error(
         '❌ Mail server connection failed:',
@@ -99,12 +119,16 @@ export class MailService {
   }
 
   private async sendMail(options: MailOptions): Promise<void> {
-    const user = this.configService.get<string>('MAIL_USER');
-    const pass = this.configService.get<string>('MAIL_PASSWORD');
+    if (this.isProduction) {
+      return this.sendMailWithSendGrid(options);
+    }
+    return this.sendMailWithGmail(options);
+  }
 
-    if (!user || !pass) {
+  private async sendMailWithGmail(options: MailOptions): Promise<void> {
+    if (!process.env.MAIL_USER || !process.env.MAIL_PASSWORD) {
       this.logger.warn(
-        `⚠️ Mail no configurado (MAIL_USER/MAIL_PASSWORD faltantes). No se puede enviar correo a ${options.to}`,
+        `⚠️ Mail not configured. Cannot send email to ${options.to}`,
       );
       throw new Error(
         'Mail service not configured. MAIL_USER and MAIL_PASSWORD are required.',
@@ -113,7 +137,7 @@ export class MailService {
 
     try {
       const mailOptions = {
-        from: `Providence Fitness <${this.configService.get('MAIL_FROM') || user}>`,
+        from: `Providence Fitness <${process.env.MAIL_USER}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -121,21 +145,53 @@ export class MailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      this.logger.log(`✅ Email sent to ${options.to}: ${info.messageId}`);
+      this.logger.log(
+        `✅ Email sent via Gmail to ${options.to}: ${info.messageId}`,
+      );
     } catch (error: any) {
       this.logger.error(
         `❌ Failed to send email to ${options.to}:`,
         error?.message || error,
-        error?.stack,
+      );
+      throw error;
+    }
+  }
+
+  private async sendMailWithSendGrid(options: MailOptions): Promise<void> {
+    if (!process.env.SENDGRID_API_KEY) {
+      this.logger.warn(
+        `⚠️ SendGrid API key not configured. Cannot send email to ${options.to}`,
+      );
+      throw new Error('SENDGRID_API_KEY is required in production.');
+    }
+
+    try {
+      const msg = {
+        to: options.to,
+        from: {
+          email: process.env.SENDGRID_FROM_EMAIL || 'providenceapi@gmail.com',
+          name: 'Providence Fitness',
+        },
+        subject: options.subject,
+        html: options.html,
+      };
+      const result = await sgMail.send(msg);
+      this.logger.log(
+        `✅ Email sent via SendGrid to ${options.to}: ${result[0].statusCode}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed to send email via SendGrid to ${options.to}:`,
+        error?.message || error?.response?.body || error,
       );
       throw error;
     }
   }
 
   async sendWelcomeEmail(email: string, data: WelcomeEmailData): Promise<void> {
+    this.logger.log(`📧 Sending welcome email to ${email}`);
     const template = this.loadTemplate('welcome');
     const html = this.replaceVariables(template, data);
-
     await this.sendMail({
       to: email,
       subject: '¡Bienvenido a Providence Fitness! 🏋️',
@@ -147,6 +203,10 @@ export class MailService {
     email: string,
     data: ReservationConfirmationData,
   ): Promise<void> {
+    this.logger.log(
+      `📧 Sending reservation confirmation to ${email} for activity ${data.activityName}`,
+    );
+
     const template = this.loadTemplate('reservation-confirmation');
     const html = this.replaceVariables(template, data);
 
@@ -161,6 +221,10 @@ export class MailService {
     email: string,
     data: TurnCancellationData,
   ): Promise<void> {
+    this.logger.log(
+      `📧 Sending cancellation notification to ${email} for activity ${data.activityName}`,
+    );
+
     const template = this.loadTemplate('turn-cancellation');
     const html = this.replaceVariables(template, data);
 
@@ -171,32 +235,45 @@ export class MailService {
     });
   }
 
+  async sendTurnCancellationNotification(
+    email: string,
+    data: TurnCancellationData,
+  ): Promise<void> {
+    return this.sendReservationCancellation(email, data);
+  }
+
   async sendPaymentConfirmation(
     email: string,
     data: PaymentConfirmationData,
   ): Promise<void> {
+    this.logger.log(`📧 Sending payment confirmation to ${email}`);
+
     const template = this.loadTemplate('payment-confirmation');
     const html = this.replaceVariables(template, data);
 
     await this.sendMail({
       to: email,
-      subject: `Pago confirmado: $${data.amount} ✅`,
+      subject: `✅ Pago confirmado - ${data.description}`,
       html,
     });
   }
 
   async sendPaymentAlert(email: string, data: PaymentAlertData): Promise<void> {
+    this.logger.log(`📧 Sending payment alert to ${email}`);
+
     const template = this.loadTemplate('payment-alert');
     const html = this.replaceVariables(template, data);
 
     await this.sendMail({
       to: email,
-      subject: `⚠️ Recordatorio de pago - Vence ${data.dueDate}`,
+      subject: '⚠️ Recordatorio de pago pendiente',
       html,
     });
   }
 
   async sendTurnReminder(email: string, data: TurnReminderData): Promise<void> {
+    this.logger.log(`📧 Sending turn reminder to ${email}`);
+
     const template = this.loadTemplate('turn-reminder');
     const html = this.replaceVariables(template, data);
 
@@ -207,24 +284,12 @@ export class MailService {
     });
   }
 
-  async sendTurnCancellationNotification(
-    email: string,
-    data: TurnCancellationData,
-  ): Promise<void> {
-    const template = this.loadTemplate('turn-cancellation');
-    const html = this.replaceVariables(template, data);
-
-    await this.sendMail({
-      to: email,
-      subject: `⚠️ Turno cancelado: ${data.activityName}`,
-      html,
-    });
-  }
-
   async sendAdminNotification(
     email: string,
     data: AdminNotificationData,
   ): Promise<void> {
+    this.logger.log(`📧 Sending admin notification to ${email}`);
+
     const template = this.loadTemplate('admin-notification');
     const html = this.replaceVariables(template, data);
 
@@ -234,12 +299,13 @@ export class MailService {
       html,
     });
   }
-
   async sendBulkEmails(
     emails: string[],
     subject: string,
     data: AdminNotificationData,
   ): Promise<void> {
+    this.logger.log(`📧 Sending bulk emails to ${emails.length} recipients`);
+
     const template = this.loadTemplate('admin-notification');
     const html = this.replaceVariables(template, data);
 
@@ -248,10 +314,14 @@ export class MailService {
         to: email,
         subject,
         html,
+      }).catch((err) => {
+        this.logger.error(`Error sending email to ${email}:`, err);
       }),
     );
 
     await Promise.allSettled(promises);
-    this.logger.log(`📧 Bulk email sent to ${emails.length} recipients`);
+    this.logger.log(
+      `✅ Bulk email process completed for ${emails.length} recipients`,
+    );
   }
 }

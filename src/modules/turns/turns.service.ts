@@ -38,11 +38,18 @@ export class TurnsService {
         'Cannot generate turns for inactive activities',
       );
     }
-
-    const startDate = new Date(dto.startDate);
-    const endDate = dto.daysAhead
-      ? new Date(startDate.getTime() + dto.daysAhead * 24 * 60 * 60 * 1000)
-      : new Date(dto.endDate);
+    const [startYear, startMonth, startDay] = dto.startDate
+      .split('-')
+      .map(Number);
+    const startDate = new Date(startYear, startMonth - 1, startDay, 0, 0, 0);
+    let endDate: Date;
+    if (dto.daysAhead) {
+      endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + dto.daysAhead);
+    } else {
+      const [endYear, endMonth, endDay] = dto.endDate.split('-').map(Number);
+      endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59);
+    }
     if (startDate >= endDate) {
       throw new BadRequestException('Start date must be before end date');
     }
@@ -144,10 +151,12 @@ export class TurnsService {
     if (dto.startTime >= dto.endTime) {
       throw new BadRequestException('Start time must be before end time');
     }
+    const [year, month, day] = dto.date.split('-').map(Number);
+    const turnDate = new Date(year, month - 1, day, 0, 0, 0);
     const existingTurn = await this.turnRepository.findOne({
       where: {
         activityId: dto.activityId,
-        date: new Date(dto.date),
+        date: turnDate,
         startTime: dto.startTime,
       },
     });
@@ -159,7 +168,7 @@ export class TurnsService {
     const capacity = dto.capacity || activity.capacity;
     const turn = this.turnRepository.create({
       activityId: dto.activityId,
-      date: new Date(dto.date),
+      date: turnDate,
       startTime: dto.startTime,
       endTime: dto.endTime,
       capacity: capacity,
@@ -177,20 +186,26 @@ export class TurnsService {
         .createQueryBuilder('turn')
         .leftJoinAndSelect('turn.activity', 'activity')
         .leftJoinAndSelect('turn.reservations', 'reservations');
+
       if (filterDto?.activityId) {
         queryBuilder.andWhere('turn.activityId = :activityId', {
           activityId: filterDto.activityId,
         });
       }
-
       if (filterDto?.startDate) {
+        const [year, month, day] = filterDto.startDate.split('-').map(Number);
+        const startDate = new Date(year, month - 1, day, 0, 0, 0);
+
         queryBuilder.andWhere('turn.date >= :startDate', {
-          startDate: filterDto.startDate.split('T')[0],
+          startDate: startDate,
         });
       }
       if (filterDto?.endDate) {
+        const [year, month, day] = filterDto.endDate.split('-').map(Number);
+        const endDate = new Date(year, month - 1, day, 23, 59, 59);
+
         queryBuilder.andWhere('turn.date <= :endDate', {
-          endDate: filterDto.endDate.split('T')[0],
+          endDate: endDate,
         });
       }
       if (filterDto?.status && filterDto.onlyAvailable !== true) {

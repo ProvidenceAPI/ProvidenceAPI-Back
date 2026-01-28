@@ -14,12 +14,14 @@ import { SubscriptionsModule } from './modules/subscriptions/subscriptions.modul
 import { MercadoPagoModule } from './modules/mercadopago/mercadopago.module';
 import { AdminNotificationsModule } from './modules/admin-notifications/admin-notifications.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { TestimonialsModule } from './modules/testimonials/testimonials.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [typeorm],
+      envFilePath: '.env.development',
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -46,6 +48,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     SubscriptionsModule,
     AdminNotificationsModule,
     NotificationsModule,
+    TestimonialsModule,
   ],
   controllers: [],
   providers: [],

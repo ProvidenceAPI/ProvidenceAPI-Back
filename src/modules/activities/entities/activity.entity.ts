@@ -153,7 +153,10 @@ export class Activity {
     description: 'User who created this activity',
     required: false,
   })
-  @ManyToOne(() => User, (user) => user.createdActivities, { nullable: true })
+  @ManyToOne(() => User, (user) => user.createdActivities, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'createdById' })
   createdBy?: User;
 }

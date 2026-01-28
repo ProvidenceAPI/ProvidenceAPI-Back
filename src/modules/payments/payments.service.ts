@@ -52,7 +52,7 @@ export class PaymentsService {
       reservation: undefined,
       status: PaymentStatus.pending,
       dueDate,
-      activity: { id: activity.id },
+      activity: activity,
     });
     const savedPayment = await this.paymentRepository.save(payment);
     try {
@@ -65,10 +65,11 @@ export class PaymentsService {
           },
         ],
         back_urls: {
-          success: `${this.configService.get('FRONTEND_URL')}/payment/success`,
-          failure: `${this.configService.get('FRONTEND_URL')}/payment/failure`,
-          pending: `${this.configService.get('FRONTEND_URL')}/payment/pending`,
+          success: `${this.configService.get('FRONTEND_URL')}/mis-pagos?status=approved`,
+          failure: `${this.configService.get('FRONTEND_URL')}/mis-pagos?status=rejected`,
+          pending: `${this.configService.get('FRONTEND_URL')}/mis-pagos?status=pending`,
         },
+        auto_return: 'approved',
         notification_url: `${this.configService.get('PUBLIC_API_URL')}/api/payments/webhook`,
         metadata: {
           user_id: userId,
@@ -229,6 +230,9 @@ export class PaymentsService {
         }),
         paymentMethod: 'MercadoPago',
         transactionId: payment.mercadoPagoId,
+        description: payment.reservation
+          ? `Pago de clase - ${payment.reservation?.turn?.activity?.name}`
+          : 'Pago de suscripción mensual',
         reservationDate: payment.reservation
           ? payment.reservation.activityDate.toLocaleDateString('es-ES', {
               weekday: 'long',
@@ -262,12 +266,14 @@ export class PaymentsService {
   async getMyPayments(userId: string) {
     return await this.paymentRepository.find({
       where: { user: { id: userId } },
+      relations: ['activity', 'reservation', 'user'],
       order: { createdAt: 'DESC' },
     });
   }
 
   async getAllPayments() {
     return await this.paymentRepository.find({
+      relations: ['activity', 'reservation', 'user'],
       order: { createdAt: 'DESC' },
     });
   }

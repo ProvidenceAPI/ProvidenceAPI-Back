@@ -9,14 +9,16 @@ dotenvConfig({
 });
 
 export default registerAs('typeorm', () => {
+  const isProduction = process.env.NODE_ENV === 'production';
   if (process.env.DATABASE_URL) {
     return {
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV !== 'production',
+      synchronize: false,
       dropSchema: false,
-      logging: process.env.NODE_ENV === 'development',
+      logging: isProduction ? ['error'] : true,
+      maxQueryExecutionTime: isProduction ? 1000 : 0,
       ssl:
         process.env.NODE_ENV === 'production'
           ? {
@@ -34,8 +36,8 @@ export default registerAs('typeorm', () => {
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
     autoLoadEntities: true,
-    synchronize: process.env.NODE_ENV !== 'production',
+    synchronize: true,
     dropSchema: false,
-    logging: process.env.NODE_ENV === 'development',
+    logging: true,
   };
 });

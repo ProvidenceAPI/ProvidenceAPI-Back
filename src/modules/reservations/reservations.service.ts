@@ -47,20 +47,22 @@ export class ReservationsService {
     if (user.status === UserStatus.banned)
       throw new ForbiddenException('Your account is banned');
     if (user.status === UserStatus.cancelled)
-      throw new ForbiddenException('Your account is cancelled');
+      throw new ForbiddenException('Your account has been cancelled.');
 
     const turn = await this.turnsService.findOne(dto.turnId);
     if (turn.activity.status === ActivityStatus.inactive) {
       throw new BadRequestException(
-        'Cannot reserve turns for inactive activities',
+        'You cannot book turns for inactive activities',
       );
     }
     if (turn.status === TurnStatus.cancelled)
-      throw new BadRequestException('This turn has been cancelled');
+      throw new BadRequestException('This turn was cancelled');
     if (turn.status === TurnStatus.completed)
       throw new BadRequestException('This turn has already occurred');
     if (turn.availableSpots <= 0)
-      throw new BadRequestException('No available spots for this turn');
+      throw new BadRequestException(
+        'There are no available spots for this turn',
+      );
     const now = new Date();
     const turnDate =
       turn.date instanceof Date
@@ -73,7 +75,7 @@ export class ReservationsService {
         (turnDateTime.getTime() - now.getTime()) / (60 * 1000),
       );
       throw new BadRequestException(
-        `Debes reservar con al menos 1 hora de anticipación. Este turno comienza en ${minutesRemaining} minutos.`,
+        `You must book at least 1 hour in advance. This turn starts in ${minutesRemaining} minutes.`,
       );
     }
     const hasActiveSubscription =
@@ -96,7 +98,7 @@ export class ReservationsService {
         await this.subscriptionsService.hasUsedFreeTrial(userId);
       if (hasUsedFreeTrial)
         throw new ForbiddenException(
-          'You have already used your free trial. Subscribe to continue booking classes.',
+          'You have already used your free trial. Subscribe to continue booking classes',
         );
     }
     const reservationDate = turnDate;
@@ -109,9 +111,7 @@ export class ReservationsService {
       },
     });
     if (existingReservationSameDay) {
-      throw new ConflictException(
-        'You already have a reservation for this activity today. Only one reservation per day per activity is allowed.',
-      );
+      throw new ConflictException('Only one reservation per day is allowed.');
     }
 
     const existingReservation = await this.reservationRepo.findOne({
@@ -123,7 +123,7 @@ export class ReservationsService {
     });
     if (existingReservation)
       throw new ConflictException(
-        'You already have a reservation for this turn',
+        'There is already a reservation for this turn',
       );
     const reservation = this.reservationRepo.create({
       activityDate: turn.date,
@@ -194,13 +194,15 @@ export class ReservationsService {
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
     if (reservation.status === ReservationStatus.cancelled) {
-      throw new BadRequestException('Reservation already cancelled');
+      throw new BadRequestException('Reservation cancelled successfully');
     }
     const isOwner = reservation.user.id === requester.id;
     const isAdmin =
       requester.rol === Rol.admin || requester.rol === Rol.superAdmin;
     if (!isOwner && !isAdmin) {
-      throw new ForbiddenException('You cannot cancel this reservation');
+      throw new ForbiddenException(
+        'You are not allowed to cancel this reservation',
+      );
     }
     if (isOwner && reservation.turn) {
       const now = new Date();
@@ -216,7 +218,7 @@ export class ReservationsService {
 
       if (hoursUntilTurn < cancellationTimeLimit) {
         throw new BadRequestException(
-          `You can only cancel ${cancellationTimeLimit} hours before the turn`,
+          `You can only cancel up to ${cancellationTimeLimit} hours before the turn`,
         );
       }
     }
@@ -270,7 +272,7 @@ export class ReservationsService {
       );
     }
 
-    return { message: 'Reservation cancelled successfully' };
+    return { message: 'Reserva cancelada existosamente' };
   }
 
   async cancelTurnAndNotifyUsers(
@@ -280,7 +282,7 @@ export class ReservationsService {
     const turn = await this.turnsService.findOne(turnId);
 
     if (turn.status === TurnStatus.cancelled) {
-      throw new BadRequestException('Turn is already cancelled');
+      throw new BadRequestException('Turn cancelled successfully');
     }
     const activeReservations = await this.reservationRepo.find({
       where: {
@@ -306,7 +308,7 @@ export class ReservationsService {
         this.logger.log(
           `📧 Enviando notificación de turno cancelado a ${reservation.user.email}`,
         );
-        await this.mailService.sendTurnCancellationNotification(
+        await this.mailService.sendReservationCancellation(
           reservation.user.email,
           {
             userName: reservation.user.name,
@@ -482,11 +484,13 @@ export class ReservationsService {
       throw new NotFoundException('User not found');
     }
     if (newUser.status === UserStatus.banned) {
-      throw new ForbiddenException('Cannot assign reservation to banned user');
+      throw new ForbiddenException(
+        'Cannot assign a reservation to a banned user',
+      );
     }
     if (newUser.status === UserStatus.cancelled) {
       throw new ForbiddenException(
-        'Cannot assign reservation to cancelled user',
+        'Cannot assign a reservation to a cancelled user',
       );
     }
 
@@ -594,7 +598,7 @@ export class ReservationsService {
     }
     if (reservation.status === ReservationStatus.cancelled) {
       throw new BadRequestException(
-        'Cannot change turn of a cancelled reservation',
+        'Cannot change the turn of a cancelled reservation',
       );
     }
 
@@ -604,12 +608,12 @@ export class ReservationsService {
     }
     if (newTurn.status === TurnStatus.cancelled) {
       throw new BadRequestException(
-        'Cannot assign reservation to a cancelled turn',
+        'Cannot assign a reservation to a cancelled turn',
       );
     }
     if (newTurn.status === TurnStatus.completed) {
       throw new BadRequestException(
-        'Cannot assign reservation to a completed turn',
+        'Cannot assign a reservation to a completed turn',
       );
     }
     if (newTurn.availableSpots <= 0) {
@@ -652,7 +656,7 @@ export class ReservationsService {
       const newTurnDate =
         newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
       this.logger.log(
-        `📧 Enviando correo de confirmación de cambio de turno a ${reservation.user.email}`,
+        `📧 Sending turn change confirmation email to ${reservation.user.email}`,
       );
       await this.mailService.sendReservationConfirmation(
         reservation.user.email,

@@ -35,15 +35,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     try {
       const user = await this.usersService.getUserById(payload.id);
       if (!user) {
-        throw new UnauthorizedException('Usuario no encontrado');
+        throw new UnauthorizedException('User not found');
       }
       if (user.status === UserStatus.banned) {
         throw new UnauthorizedException(
-          'Tu cuenta ha sido suspendida. Contacta al administrador.',
+          'Your account has been suspended. Please contact the administrator.',
         );
       }
       if (user.status === UserStatus.cancelled) {
-        throw new UnauthorizedException('Tu cuenta ha sido cancelada.');
+        throw new UnauthorizedException('Your account has been cancelled.');
       }
       return {
         id: payload.id,
@@ -55,7 +55,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException('Error validando token');
+      throw new UnauthorizedException('Error validating token');
     }
   }
 }
