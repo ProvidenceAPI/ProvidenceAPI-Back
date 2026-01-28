@@ -34,10 +34,12 @@ export class TestimonialsController {
   @ApiOperation({ summary: 'Get approved testimonials (Public)' })
   @ApiResponse({ status: 200, description: 'Approved testimonials list' })
   getApprovedTestimonials(
-    @Query('page', new ParseIntPipe({ optional: true })) page?: number,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit?: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.service.getAllTestimonials(page, limit);
+    const pageNum = page ? parseInt(page, 10) : 1;
+    const limitNum = limit ? parseInt(limit, 10) : 6;
+    return this.service.getAllTestimonials(pageNum, limitNum);
   }
 
   @Get('check-eligibility')
