@@ -9,14 +9,16 @@ dotenvConfig({
 });
 
 export default registerAs('typeorm', () => {
+  const isProduction = process.env.NODE_ENV === 'production';
   if (process.env.DATABASE_URL) {
     return {
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
-      synchronize: true,
+      synchronize: false,
       dropSchema: false,
-      logging: true,
+      logging: isProduction ? ['error'] : true,
+      maxQueryExecutionTime: isProduction ? 1000 : 0,
       ssl:
         process.env.NODE_ENV === 'production'
           ? {
