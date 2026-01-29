@@ -101,8 +101,8 @@ export class ReservationsSchedulerService {
       const target = new Date(now);
       target.setHours(target.getHours() + 3);
 
-      const targetDateStr = target.toISOString().split('T')[0]; // YYYY-MM-DD
-      const targetTimeStr = target.toTimeString().slice(0, 5); // HH:MM
+      const targetDateStr = target.toISOString().split('T')[0]; 
+      const targetTimeStr = target.toTimeString().slice(0, 5); 
 
       const reservations = await this.reservationRepository
         .createQueryBuilder('reservation')
@@ -166,13 +166,20 @@ export class ReservationsSchedulerService {
     this.logger.log(`⏰ [${jobLabel}] Starting completion of yesterday reservations...`);
 
     try {
+      
       const now = new Date();
-      // Ayer en zona local del servidor (el CRON ya usa la zona de Buenos Aires)
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
+      
+      
+      const year = yesterday.getFullYear();
+      const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+      const day = String(yesterday.getDate()).padStart(2, '0');
+      const yesterdayStr = `${year}-${month}-${day}`;
 
-      // Como activityDate es DATE (sin hora), usamos solo la parte de fecha YYYY-MM-DD
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      this.logger.log(
+        `📅 [${jobLabel}] Marking reservations from ${yesterdayStr} as completed`,
+      );
 
       const result = await this.reservationRepository
         .createQueryBuilder()
@@ -234,21 +241,55 @@ export class ReservationsSchedulerService {
 
       for (const reservation of reservations) {
         try {
-          const activityDate =
-            reservation.activityDate instanceof Date
-              ? reservation.activityDate
-              : new Date(reservation.activityDate);
+          
+          let activityDateStr: string;
+          if (reservation.activityDate instanceof Date) {
+           
+            const date = reservation.activityDate;
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            activityDateStr = `${year}-${month}-${day}`;
+          } else {
+           
+            activityDateStr = String(reservation.activityDate).split('T')[0];
+          }
 
+         
+          const [year, month, day] = activityDateStr.split('-').map(Number);
+          
+         
           const [hours, minutes] = reservation.startTime.split(':').map(Number);
-          const reservationDateTime = new Date(activityDate);
-          reservationDateTime.setHours(hours, minutes, 0, 0);
 
-          if (reservationDateTime <= fifteenMinutesAgo) {
+          
+          const reservationDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+
+          if (isNaN(reservationDateTime.getTime())) {
+            this.logger.warn(
+              `⚠️ Invalid date for reservation ${reservation.id}: ${activityDateStr} ${reservation.startTime}`,
+            );
+            skipped++;
+            continue;
+          }
+
+          
+          const shouldComplete = reservationDateTime < fifteenMinutesAgo;
+          
+          if (shouldComplete) {
             reservation.status = ReservationStatus.completed;
             await this.reservationRepository.save(reservation);
             completed++;
+            this.logger.log(
+              `✅ Marked reservation ${reservation.id} as completed (started at ${activityDateStr} ${reservation.startTime}, datetime: ${reservationDateTime.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}, threshold: ${fifteenMinutesAgo.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })})`,
+            );
           } else {
             skipped++;
+           
+            if (skipped <= 3) {
+              this.logger.debug(
+                `⏭️ Skipped reservation ${reservation.id} (not yet completed): ${activityDateStr} ${reservation.startTime}, datetime: ${reservationDateTime.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}, threshold: ${fifteenMinutesAgo.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`,
+              );
+            }
           }
         } catch (error: any) {
           this.logger.error(

@@ -41,16 +41,20 @@ export class TestimonialsService {
       );
     }
     const testimonial = this.testimonialRepo.create({
-      ...dto,
+      comment: dto.comment,
+      rating: dto.rating,
+      profession: dto.profession,
       user: { id: userId } as any,
     });
     return await this.testimonialRepo.save(testimonial);
   }
 
   async getAllTestimonials(page: number = 1, limit: number = 6) {
+    const skip = (page - 1) * limit;
     const [testimonials, total] = await this.testimonialRepo.findAndCount({
       order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
+      relations: ['user'],
+      skip: skip,
       take: limit,
     });
     return {

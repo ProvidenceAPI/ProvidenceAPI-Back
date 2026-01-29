@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsInt,
+  IsOptional,
   IsString,
   Max,
   MaxLength,
@@ -25,5 +26,6 @@ export class CreateTestimonialDto {
 
   @ApiProperty({ example: 'Professional gymnast' })
   @IsString()
+  @IsOptional()
   profession: string;
 }

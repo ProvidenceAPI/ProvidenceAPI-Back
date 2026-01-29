@@ -187,6 +187,27 @@ export class TurnsService {
         .leftJoinAndSelect('turn.activity', 'activity')
         .leftJoinAndSelect('turn.reservations', 'reservations');
 
+      
+      if (filterDto?.status) {
+        const statusMap: { [key: string]: TurnStatus } = {
+          available: TurnStatus.available,
+          full: TurnStatus.full,
+          cancelled: TurnStatus.cancelled,
+          completed: TurnStatus.completed,
+        };
+        const mappedStatus = statusMap[filterDto.status.toLowerCase()];
+        if (mappedStatus) {
+          queryBuilder.andWhere('turn.status = :status', {
+            status: mappedStatus,
+          });
+        }
+      } else {
+
+        queryBuilder.andWhere('turn.status != :cancelledStatus', {
+          cancelledStatus: TurnStatus.cancelled,
+        });
+      }
+
       if (filterDto?.activityId) {
         queryBuilder.andWhere('turn.activityId = :activityId', {
           activityId: filterDto.activityId,
@@ -207,20 +228,6 @@ export class TurnsService {
         queryBuilder.andWhere('turn.date <= :endDate', {
           endDate: endDate,
         });
-      }
-      if (filterDto?.status && filterDto.onlyAvailable !== true) {
-        const statusMap: { [key: string]: TurnStatus } = {
-          available: TurnStatus.available,
-          full: TurnStatus.full,
-          cancelled: TurnStatus.cancelled,
-          completed: TurnStatus.completed,
-        };
-        const mappedStatus = statusMap[filterDto.status.toLowerCase()];
-        if (mappedStatus) {
-          queryBuilder.andWhere('turn.status = :status', {
-            status: mappedStatus,
-          });
-        }
       }
 
       if (filterDto?.onlyAvailable === true) {

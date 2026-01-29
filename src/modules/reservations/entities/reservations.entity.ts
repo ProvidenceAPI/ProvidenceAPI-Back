@@ -90,6 +90,7 @@ export class Reservation {
   })
   @ManyToOne(() => Activity, (activity) => activity.reservations, {
     eager: true,
+    onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'activityId' })
   activity: Activity;
