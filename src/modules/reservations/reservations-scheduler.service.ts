@@ -101,8 +101,8 @@ export class ReservationsSchedulerService {
       const target = new Date(now);
       target.setHours(target.getHours() + 3);
 
-      const targetDateStr = target.toISOString().split('T')[0]; // YYYY-MM-DD
-      const targetTimeStr = target.toTimeString().slice(0, 5); // HH:MM
+      const targetDateStr = target.toISOString().split('T')[0]; 
+      const targetTimeStr = target.toTimeString().slice(0, 5); 
 
       const reservations = await this.reservationRepository
         .createQueryBuilder('reservation')
@@ -166,13 +166,12 @@ export class ReservationsSchedulerService {
     this.logger.log(`⏰ [${jobLabel}] Starting completion of yesterday reservations...`);
 
     try {
-      // Obtener la fecha de ayer en zona horaria de Buenos Aires
-      // Usamos la fecha local actual y restamos un día
+      
       const now = new Date();
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
       
-      // Formatear como YYYY-MM-DD usando la fecha local (no UTC)
+      
       const year = yesterday.getFullYear();
       const month = String(yesterday.getMonth() + 1).padStart(2, '0');
       const day = String(yesterday.getDate()).padStart(2, '0');
@@ -242,31 +241,29 @@ export class ReservationsSchedulerService {
 
       for (const reservation of reservations) {
         try {
-          // Obtener la fecha como string YYYY-MM-DD usando fecha LOCAL (no UTC)
+          
           let activityDateStr: string;
           if (reservation.activityDate instanceof Date) {
-            // Usar métodos locales en lugar de toISOString() para evitar problemas de UTC
+           
             const date = reservation.activityDate;
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             activityDateStr = `${year}-${month}-${day}`;
           } else {
-            // Si viene como string desde la BD, convertir a string explícitamente
+           
             activityDateStr = String(reservation.activityDate).split('T')[0];
           }
 
-          // Parsear la fecha correctamente (YYYY-MM-DD)
+         
           const [year, month, day] = activityDateStr.split('-').map(Number);
           
-          // Parsear la hora (HH:MM:SS o HH:MM)
+         
           const [hours, minutes] = reservation.startTime.split(':').map(Number);
 
-          // Crear la fecha/hora de la reserva en zona local (Buenos Aires)
-          // Usamos el constructor que acepta año, mes (0-indexed), día, hora, minuto
+          
           const reservationDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
-          // Validación adicional: asegurarse de que la fecha parseada es válida
           if (isNaN(reservationDateTime.getTime())) {
             this.logger.warn(
               `⚠️ Invalid date for reservation ${reservation.id}: ${activityDateStr} ${reservation.startTime}`,
@@ -275,8 +272,7 @@ export class ReservationsSchedulerService {
             continue;
           }
 
-          // Comparar: solo marcar como completada si la reserva ya pasó (hace más de 15 minutos)
-          // Usamos < en lugar de <= para ser más estricto
+          
           const shouldComplete = reservationDateTime < fifteenMinutesAgo;
           
           if (shouldComplete) {
@@ -288,7 +284,7 @@ export class ReservationsSchedulerService {
             );
           } else {
             skipped++;
-            // Log detallado para debugging (solo para las primeras reservas)
+           
             if (skipped <= 3) {
               this.logger.debug(
                 `⏭️ Skipped reservation ${reservation.id} (not yet completed): ${activityDateStr} ${reservation.startTime}, datetime: ${reservationDateTime.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}, threshold: ${fifteenMinutesAgo.toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}`,

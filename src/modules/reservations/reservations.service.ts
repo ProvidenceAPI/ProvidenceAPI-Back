@@ -354,18 +354,29 @@ export class ReservationsService {
   }
 
   async getMyReservations(userId: string) {
-    return this.reservationRepo.find({
-      where: { user: { id: userId } },
-      relations: ['turn', 'activity'],
-      order: { createdAt: 'DESC' },
-    });
+    return this.reservationRepo
+      .createQueryBuilder('reservation')
+      .leftJoinAndSelect('reservation.turn', 'turn')
+      .leftJoinAndSelect('reservation.activity', 'activity')
+      .where('reservation.userId = :userId', { userId })
+      .andWhere('turn.status != :cancelledStatus', {
+        cancelledStatus: TurnStatus.cancelled,
+      })
+      .orderBy('reservation.createdAt', 'DESC')
+      .getMany();
   }
 
   async getAllReservations() {
-    return this.reservationRepo.find({
-      relations: ['turn', 'activity', 'user'],
-      order: { createdAt: 'DESC' },
-    });
+    return this.reservationRepo
+      .createQueryBuilder('reservation')
+      .leftJoinAndSelect('reservation.turn', 'turn')
+      .leftJoinAndSelect('reservation.activity', 'activity')
+      .leftJoinAndSelect('reservation.user', 'user')
+      .where('turn.status != :cancelledStatus', {
+        cancelledStatus: TurnStatus.cancelled,
+      })
+      .orderBy('reservation.createdAt', 'DESC')
+      .getMany();
   }
 
   async cancelAllActiveReservationsByUser(userId: string) {
@@ -612,6 +623,13 @@ export class ReservationsService {
     if (!newTurn) {
       throw new NotFoundException('Turn not found');
     }
+   
+    if (reservation.turnId === newTurnId) {
+      throw new BadRequestException(
+        'La reserva ya está asignada a este turno',
+      );
+    }
+    
     if (newTurn.status === TurnStatus.cancelled) {
       throw new BadRequestException(
         'Cannot assign a reservation to a cancelled turn',
@@ -626,6 +644,28 @@ export class ReservationsService {
       throw new BadRequestException('No available spots for this turn');
     }
 
+    const now = new Date();
+    const turnDate =
+      newTurn.date instanceof Date
+        ? newTurn.date.toISOString().split('T')[0]
+        : newTurn.date;
+   
+    const todayStr = now.toISOString().split('T')[0];
+    if (turnDate < todayStr) {
+      throw new BadRequestException('You cannot reassign to a past date');
+    }
+
+    const turnDateTime = new Date(`${turnDate}T${newTurn.startTime}`);
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    if (turnDateTime < oneHourFromNow) {
+      const minutesRemaining = Math.floor(
+        (turnDateTime.getTime() - now.getTime()) / (60 * 1000),
+      );
+      throw new BadRequestException(
+        `You must reassign at least 1 hour in advance. This turn starts in ${minutesRemaining} minutes.`,
+      );
+    }
+
     const existingReservation = await this.reservationRepo.findOne({
       where: {
         turnId: newTurnId,
@@ -633,10 +673,18 @@ export class ReservationsService {
         status: ReservationStatus.confirmed,
       },
     });
-    if (existingReservation && existingReservation.id !== reservationId) {
-      throw new ConflictException(
-        'User already has a reservation for this turn',
-      );
+    
+  
+    if (existingReservation) {
+     
+      const existingId = String(existingReservation.id);
+      const currentId = String(reservationId);
+      
+      if (existingId !== currentId) {
+        throw new ConflictException(
+          'User already has a reservation for this turn',
+        );
+      }
     }
     const oldTurn = reservation.turn;
     const oldActivityName =
@@ -650,8 +698,23 @@ export class ReservationsService {
     reservation.turn = newTurn;
     reservation.activityId = newTurn.activityId;
     reservation.activity = newTurn.activity;
-    reservation.activityDate =
-      newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
+    
+    let turnDateStr: string;
+    if (newTurn.date instanceof Date) {
+   
+      const year = newTurn.date.getFullYear();
+      const month = String(newTurn.date.getMonth() + 1).padStart(2, '0');
+      const day = String(newTurn.date.getDate()).padStart(2, '0');
+      turnDateStr = `${year}-${month}-${day}`;
+    } else {
+   
+      turnDateStr = String(newTurn.date).split('T')[0].split(' ')[0];
+    }
+    
+  
+    const [year, month, day] = turnDateStr.split('-').map(Number);
+    reservation.activityDate = new Date(year, month - 1, day);
+    
     reservation.startTime = newTurn.startTime;
     reservation.endTime = newTurn.endTime;
 
@@ -659,8 +722,8 @@ export class ReservationsService {
     await this.reservationRepo.save(reservation);
 
     try {
-      const newTurnDate =
-        newTurn.date instanceof Date ? newTurn.date : new Date(newTurn.date);
+     
+      const newTurnDate = reservation.activityDate;
       this.logger.log(
         `📧 Sending turn change confirmation email to ${reservation.user.email}`,
       );
