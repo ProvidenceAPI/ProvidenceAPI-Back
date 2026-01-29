@@ -187,8 +187,7 @@ export class TurnsService {
         .leftJoinAndSelect('turn.activity', 'activity')
         .leftJoinAndSelect('turn.reservations', 'reservations');
 
-      
-      if (filterDto?.status) {
+      if (filterDto?.status && filterDto.onlyAvailable !== true) {
         const statusMap: { [key: string]: TurnStatus } = {
           available: TurnStatus.available,
           full: TurnStatus.full,
@@ -201,11 +200,6 @@ export class TurnsService {
             status: mappedStatus,
           });
         }
-      } else {
-
-        queryBuilder.andWhere('turn.status != :cancelledStatus', {
-          cancelledStatus: TurnStatus.cancelled,
-        });
       }
 
       if (filterDto?.activityId) {
