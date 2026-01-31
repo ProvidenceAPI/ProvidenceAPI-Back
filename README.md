@@ -1,4 +1,4 @@
-#🏋️ Providence Fitness API
+# 🏋️ Providence Fitness API
 
 ### Sistema Integral de Gestión de Turnos para Gimnasios
 Backend API desarrollada para digitalizar y centralizar la gestión operativa de gimnasios multiactividad: reservas de turnos, pagos mensuales por actividad, usuarios, roles y notificaciones automáticas.
